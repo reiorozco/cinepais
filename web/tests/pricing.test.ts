@@ -102,4 +102,19 @@ describe("seatPrice", () => {
     // 32000 × 0.6 = 19200 → round(19200/500)*500 = round(38.4)*500 = 38×500 = 19000
     expect(seatPrice(["IMAX"], "general", "2026-08-05")).toBe(19000);
   });
+
+  test("Onyx general non-wednesday → 28000", () => {
+    // 28000 × 1.0 = 28000 → round(28000/500)*500 = 56×500 = 28000
+    expect(seatPrice(["Onyx"], "general", "2026-08-04")).toBe(28000);
+  });
+
+  test("Onyx general on wednesday → 17000 (wednesday discount applies)", () => {
+    // 28000 × 0.6 = 16800 → round(16800/500)*500 = 34×500 = 17000; 2026-08-05 is Wed
+    expect(seatPrice(["Onyx"], "general", "2026-08-05")).toBe(17000);
+  });
+
+  test("Onyx premium non-wednesday → 38000 (zone multiplier compounds)", () => {
+    // 28000 × 1.35 = 37800 → round(37800/500)*500 = 76×500 = 38000
+    expect(seatPrice(["Onyx"], "premium", "2026-08-04")).toBe(38000);
+  });
 });

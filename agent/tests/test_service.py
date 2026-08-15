@@ -311,7 +311,7 @@ async def test_cors_allowed_origin(app_with_mock_agent: FastAPI) -> None:
         resp = await client.options(
             "/chat",
             headers={
-                "Origin": settings.cors_origin,
+                "Origin": settings.cors_origins[0],
                 "Access-Control-Request-Method": "POST",
             },
         )

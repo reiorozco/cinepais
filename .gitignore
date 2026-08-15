@@ -34,6 +34,15 @@ initial-load.png
 # Orchestrator run-continuation state
 .omo/run-continuation/
 
+# Orchestrator notepads (scratch state)
+.omo/notepads/
+
+# Orchestrator start-work audit trail
+.omo/start-work/
+
+# Orchestrator runtime state (session bookkeeping, not a curated artifact)
+.omo/boulder.json
+
 # OS
 .DS_Store
 *.log

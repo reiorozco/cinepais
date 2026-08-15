@@ -6,11 +6,11 @@ import type { Film } from "@/lib/api/schemas";
 type FilmCardProps = {
   film: Film;
   /**
-   * Whether the poster should be preloaded. Pass `true` for a small number
-   * of above-the-fold cards to help LCP; leave `false` (default) for the
+   * Whether the poster is fetched with high priority. Pass `true` for a small
+   * number of above-the-fold cards to help LCP; leave `false` (default) for the
    * long tail below the fold.
    */
-  preload?: boolean;
+  priority?: boolean;
 };
 
 /**
@@ -21,7 +21,7 @@ type FilmCardProps = {
  * derived from the film id suffix (`01..06` = Estreno, `09..10` = Preventa)
  * per Fase 1 seed conventions — nothing else about the card is dynamic.
  */
-export function FilmCard({ film, preload = false }: FilmCardProps) {
+export function FilmCard({ film, priority = false }: FilmCardProps) {
   const badge = badgeForFilmId(film.id);
   const genresLabel = film.genres.join(" · ");
 
@@ -38,7 +38,7 @@ export function FilmCard({ film, preload = false }: FilmCardProps) {
           fill
           sizes="(min-width: 1024px) 16vw, (min-width: 768px) 25vw, (min-width: 640px) 33vw, 50vw"
           className="object-cover transition-transform duration-300 group-hover/film-card:scale-[1.02]"
-          preload={preload}
+          priority={priority}
         />
         {badge ? (
           <Badge

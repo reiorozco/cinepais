@@ -53,7 +53,7 @@ export default async function Home() {
               <ul className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
                 {films.map((film, index) => (
                   <li key={film.id}>
-                    <FilmCard film={film} preload={index < 6} />
+                    <FilmCard film={film} priority={index < 6} />
                   </li>
                 ))}
               </ul>

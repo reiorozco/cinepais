@@ -23,6 +23,7 @@ from langchain_core.tools import BaseTool
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langgraph.checkpoint.memory import MemorySaver
 
+from .config import settings
 from .llm import get_llm
 from .prompts import SYSTEM_PROMPT
 
@@ -85,6 +86,15 @@ def _get_mcp_client() -> MultiServerMCPClient:
 
     Uses plain `python` (not `uv run`) because the parent already runs inside
     the uv venv. Using `uv run` would add latency and contend on .venv/ locks.
+
+    The env mapping is explicit and load-bearing. mcp 1.29.0's stdio_client spawns the
+    child with `get_default_environment()` alone unless the connection supplies one
+    (mcp/client/stdio/__init__.py:127), and that helper copies only
+    DEFAULT_INHERITED_ENV_VARS — on POSIX just HOME, LOGNAME, PATH, SHELL, TERM, USER
+    (:28-45). mcp_server.py reads settings.web_api_base_url on every tool call, so
+    without this the child falls back to the config.py default http://localhost:3000 —
+    correct locally, and silently wrong in a deployed container where nothing listens
+    on :3000. Supplied keys are merged *over* the default set, so PATH survives.
     """
     return MultiServerMCPClient(
         connections={
@@ -92,6 +102,7 @@ def _get_mcp_client() -> MultiServerMCPClient:
                 "transport": "stdio",
                 "command": sys.executable,
                 "args": ["-m", "cinepais_agent.mcp_server"],
+                "env": {"WEB_API_BASE_URL": settings.web_api_base_url},
             }
         }
     )
@@ -124,13 +135,15 @@ async def build_agent() -> tuple[Any, MultiServerMCPClient]:
     llm = get_llm()
     checkpointer = MemorySaver()
 
-    # Use the verified API
+    # Use the verified API. The bound recursion limit caps LangGraph super-steps per turn:
+    # the default of 25 lets a retry loop multiply the measured 3.5 LLM calls per request
+    # several-fold, and that multiplier is what the daily request cap is budgeted against.
     agent = _create_agent_fn(
         llm,
         tools,
         system_prompt=SYSTEM_PROMPT,
         checkpointer=checkpointer,
-    )
+    ).with_config({"recursion_limit": 8})
 
     return agent, mcp_client
 

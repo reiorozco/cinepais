@@ -22,6 +22,11 @@ mcp: FastMCP = FastMCP("cinepais")
 _MAX_SEATS = 4
 _MAX_SEATS_ERR: dict[str, object] = {"error": "max_seats_exceeded", "max": _MAX_SEATS}
 
+# search_showtimes takes all-optional filters, so a bare call matches the whole catalogue
+# (~672 showtimes). Tool output is re-sent as input on every later LLM call in the same turn,
+# and MAX_INPUT_CHARS bounds only the user message — so the tool has to bound itself.
+_MAX_SHOWTIME_RESULTS = 40
+
 # Bounded semaphore: worst-case film+city+finde ≈ 6 showtimes → 1 batch well within limit
 _SEAT_FETCH_SEM: asyncio.Semaphore = asyncio.Semaphore(8)
 
@@ -87,6 +92,9 @@ async def search_showtimes(
     Returns a list of showtime objects including priceFrom, or a hint dict when the
     film exists globally but has no showtimes in the requested city so the agent can
     narrate an honest alternative.
+
+    At most 40 showtimes are returned. When more match, the result carries
+    truncated: true — ask for a narrower filter instead of implying the list is complete.
     """
     async with CinepaisApiClient(base_url=settings.web_api_base_url) as client:
         film_id: str | None = None
@@ -105,6 +113,14 @@ async def search_showtimes(
                 "films_matched": [{"id": film_id, "title": film_title}],
                 "showtimes": [],
                 "hint": f"film exists but has no showtimes in {city}",
+            }
+
+        if len(showtimes) > _MAX_SHOWTIME_RESULTS:
+            return {
+                "showtimes": [st.model_dump() for st in showtimes[:_MAX_SHOWTIME_RESULTS]],
+                "truncated": True,
+                "hint": f"only the first {_MAX_SHOWTIME_RESULTS} matches are shown — "
+                "narrow by film, city, date or format",
             }
 
         return {"showtimes": [st.model_dump() for st in showtimes]}

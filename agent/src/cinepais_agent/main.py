@@ -6,6 +6,7 @@ import logging
 import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 from typing import Annotated, Any, cast
 
 import cachetools
@@ -30,11 +31,41 @@ logging.basicConfig(level=logging.INFO)
 
 logger = logging.getLogger(__name__)
 
+
+def _client_ip(request: Request) -> str:
+    """Resolve the visitor IP used as the rate-limit bucket key.
+
+    Behind Fly.io's proxy the socket peer is the edge, not the visitor, so `get_remote_address`
+    returns the same address for everyone and the per-IP limit collapses into one shared bucket.
+    Fly sets `Fly-Client-IP` to the real visitor address. The header is absent in local dev, where
+    the socket peer already is the visitor — so the fallback keeps that path unchanged.
+    """
+    fly_client_ip = request.headers.get("Fly-Client-IP")
+    return fly_client_ip if fly_client_ip else get_remote_address(request)
+
+
 # Rate limiter (decorator-only — NO SlowAPIMiddleware, breaks SSE streaming)
-limiter = Limiter(key_func=get_remote_address)
+limiter = Limiter(key_func=_client_ip)
 
 _session_queries = cast(
     cachetools.TTLCache[str, int, float], cachetools.TTLCache(maxsize=10_000, ttl=3600)
+)
+
+
+def _utc_day_key() -> str:
+    """Bucket key for the global daily request cap — UTC, never the host's local time.
+
+    The counter must roll over at the same instant regardless of which region the machine runs
+    in, so the day is derived from UTC rather than from a local-time calendar.
+    """
+    return datetime.now(UTC).strftime("%Y-%m-%d")
+
+
+# Global daily request budget, keyed by UTC day. The session cap above is bypassable — the client
+# chooses its own sessionId — so this is the only in-app ceiling a stranger cannot rotate around.
+# It lives in this process, so a Fly cold start resets it: a courtesy brake, not a hard ceiling.
+_daily_requests = cast(
+    cachetools.TTLCache[str, int, float], cachetools.TTLCache(maxsize=8, ttl=86_400)
 )
 
 # App state (agent + mcp_client, owned by lifespan)
@@ -72,7 +103,7 @@ app = FastAPI(title="CinePaís Agent", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.cors_origin],
+    allow_origins=settings.cors_origins,
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type"],
 )
@@ -121,6 +152,19 @@ async def chat(request: Request, body: ChatRequest) -> EventSourceResponse:
             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
         )
 
+    # Checked after the empty-message and length guards so malformed input never spends budget,
+    # and before the session cap because rotating a sessionId must not buy a fresh allowance.
+    day_key = _utc_day_key()
+    if _daily_requests.get(day_key, 0) >= settings.daily_request_cap:
+        return EventSourceResponse(
+            error_stream(
+                "daily_cap_exceeded",
+                "El copiloto alcanzó su cupo de consultas de hoy. Vuelve mañana — "
+                "el resto del sitio sigue disponible.",
+            ),
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        )
+
     session_count = _session_queries.get(body.sessionId, 0)
     if session_count >= settings.session_query_cap:
         return EventSourceResponse(
@@ -133,6 +177,7 @@ async def chat(request: Request, body: ChatRequest) -> EventSourceResponse:
         )
 
     _session_queries[body.sessionId] = _session_queries.get(body.sessionId, 0) + 1
+    _daily_requests[day_key] = _daily_requests.get(day_key, 0) + 1
 
     return EventSourceResponse(
         stream_agent(body.message, body.sessionId, _agent, _session_queries),

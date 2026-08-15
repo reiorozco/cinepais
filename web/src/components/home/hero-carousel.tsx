@@ -110,7 +110,7 @@ export function HeroCarousel({ films }: HeroCarouselProps) {
                   fill
                   sizes="100vw"
                   className="object-cover"
-                  preload={index === 0}
+                  priority={index === 0}
                 />
                 {/* Gradient overlay for readable copy on any poster */}
                 <div

@@ -6,6 +6,7 @@ Eval tests (marked @pytest.mark.evals) require GOOGLE_API_KEY.
 
 import asyncio
 import os
+from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -125,6 +126,56 @@ async def test_build_agent_fails_fast_on_wrong_tool_count():
         with pytest.raises(RuntimeError) as exc_info:
             await build_agent()
         assert "4" in str(exc_info.value)
+
+
+def _stdio_connection() -> dict[str, Any]:
+    """Build the cinepais stdio connection dict via agent._get_mcp_client().
+
+    MultiServerMCPClient.__init__ only stores the mapping — no subprocess is spawned —
+    so this reads the real config the child would be launched with, without mocking.
+    """
+    from cinepais_agent.agent import _get_mcp_client
+
+    return cast(dict[str, Any], _get_mcp_client().connections["cinepais"])
+
+
+def test_mcp_connection_passes_web_api_base_url_to_child_env():
+    """The stdio connection carries WEB_API_BASE_URL through to the MCP child process.
+
+    mcp 1.29.0 spawns the child with get_default_environment() alone when the connection
+    supplies no environment (mcp/client/stdio/__init__.py:127), and that helper copies only
+    DEFAULT_INHERITED_ENV_VARS — on POSIX HOME, LOGNAME, PATH, SHELL, TERM, USER (:28-45).
+    mcp_server.py reads settings.web_api_base_url on every tool call, so it has to be passed
+    explicitly or the child never sees it.
+    """
+    from cinepais_agent.config import settings
+
+    connection = _stdio_connection()
+
+    child_env = connection.get("env")
+    assert child_env is not None, "stdio connection must pass an explicit environment"
+    assert child_env["WEB_API_BASE_URL"] == settings.web_api_base_url
+    assert isinstance(child_env["WEB_API_BASE_URL"], str)
+
+
+def test_mcp_connection_env_reflects_settings_override(monkeypatch: pytest.MonkeyPatch):
+    """A non-default WEB_API_BASE_URL reaches the child instead of the localhost default.
+
+    Regression guard for the deploy blocker: with no environment on the connection the child
+    fell back to config.py's http://localhost:3000 default, so in a container every tool call
+    hit a port nothing listens on. Asserting against the live settings value alone would have
+    passed even then (both sides default to localhost) — the sentinel is what makes this test
+    able to fail.
+    """
+    from cinepais_agent.config import settings
+
+    sentinel = "http://sentinel-test-marker:9999"
+    monkeypatch.setattr(settings, "web_api_base_url", sentinel)
+
+    child_env = _stdio_connection()["env"]
+
+    assert child_env["WEB_API_BASE_URL"] == sentinel
+    assert "localhost:3000" not in child_env["WEB_API_BASE_URL"]
 
 
 @pytest.mark.asyncio

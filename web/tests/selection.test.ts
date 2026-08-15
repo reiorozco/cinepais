@@ -280,3 +280,81 @@ describe("selectionReducer — block-local index guard", () => {
     expect(s2.selectedSeatIds.has(row[19].seatId)).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// 9. showtime-switch branch (rule e)
+// ---------------------------------------------------------------------------
+
+describe("selectionReducer — showtime-switch (rule e)", () => {
+  test("toggling a seat with different showtimeId clears prior selection and applies new toggle", () => {
+    const blocks: [number, number][] = [[1, 5]];
+    const row = makeRow([1, 2, 3, 4, 5]);
+
+    // Start with showtime ST, select col 1
+    const s1 = selectionReducer(INITIAL, {
+      type: "toggle",
+      showtimeId: ST,
+      seat: row[0], // col 1
+      rowSeats: row,
+      blocks,
+    });
+    expect(s1.showtimeId).toBe(ST);
+    expect(s1.selectedSeatIds.size).toBe(1);
+    expect(s1.selectedSeatIds.has(row[0].seatId)).toBe(true);
+
+    // Switch to a different showtime and select col 3
+    const newShowtimeId = "st-different";
+    const s2 = selectionReducer(s1, {
+      type: "toggle",
+      showtimeId: newShowtimeId,
+      seat: row[2], // col 3
+      rowSeats: row,
+      blocks,
+    });
+
+    // After showtime switch: prior selection (col 1) should be cleared,
+    // and only the new seat (col 3) should be selected
+    expect(s2.showtimeId).toBe(newShowtimeId);
+    expect(s2.selectedSeatIds.size).toBe(1);
+    expect(s2.selectedSeatIds.has(row[0].seatId)).toBe(false); // old seat gone
+    expect(s2.selectedSeatIds.has(row[2].seatId)).toBe(true);  // new seat selected
+    expect(s2.error).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 10. clear action
+// ---------------------------------------------------------------------------
+
+describe("selectionReducer — clear action", () => {
+  test("clear action empties selection and returns EMPTY_STATE", () => {
+    const blocks: [number, number][] = [[1, 5]];
+    const row = makeRow([1, 2, 3, 4, 5]);
+
+    // Build up a selection with multiple seats
+    const s1 = selectionReducer(INITIAL, {
+      type: "toggle",
+      showtimeId: ST,
+      seat: row[0], // col 1
+      rowSeats: row,
+      blocks,
+    });
+    const s2 = selectionReducer(s1, {
+      type: "toggle",
+      showtimeId: ST,
+      seat: row[1], // col 2
+      rowSeats: row,
+      blocks,
+    });
+    expect(s2.selectedSeatIds.size).toBe(2);
+    expect(s2.showtimeId).toBe(ST);
+
+    // Apply clear action
+    const cleared = selectionReducer(s2, { type: "clear" });
+
+    // Should return EMPTY_STATE: empty selection, null showtimeId, null error
+    expect(cleared.selectedSeatIds.size).toBe(0);
+    expect(cleared.showtimeId).toBeNull();
+    expect(cleared.error).toBeNull();
+  });
+});

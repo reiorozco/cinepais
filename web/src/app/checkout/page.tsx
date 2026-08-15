@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Ticket } from "lucide-react";
+import { AlertCircle, Ticket } from "lucide-react";
 import { useSelectionState } from "@/components/providers/selection-provider";
 import { formatCOP } from "@/lib/format";
 import { computeOrderNumber } from "@/lib/business/order";
@@ -63,6 +63,9 @@ export default function CheckoutPage() {
 
   const [showtime, setShowtime] = useState<ShowtimeRow | null>(null);
   const [selectedSeats, setSelectedSeats] = useState<SeatRow[]>([]);
+  const [loadError, setLoadError] = useState(false);
+  // Value is never rendered — it is a fetch-effect dependency the retry button bumps
+  const [retryCount, setRetryCount] = useState(0);
   const [confirming, setConfirming] = useState(false);
 
   // Guard: empty selection → redirect to home
@@ -77,19 +80,29 @@ export default function CheckoutPage() {
     if (!showtimeId || selectedSeatIds.size === 0) return;
 
     fetch(`/api/showtimes/${showtimeId}/seats`)
-      .then((r) => r.json())
+      .then((r) => {
+        // A non-2xx response still resolves the promise, so it needs an explicit throw
+        if (!r.ok) throw new Error(`Seats request failed: ${r.status}`);
+        return r.json();
+      })
       .then((data: { showtime: ShowtimeRow; seats: SeatRow[] }) => {
         setShowtime(data.showtime);
         const ids = Array.from(selectedSeatIds);
         setSelectedSeats(data.seats.filter((s) => ids.includes(s.seatId)));
-      });
-  }, [showtimeId, selectedSeatIds]);
+      })
+      .catch(() => setLoadError(true));
+  }, [showtimeId, selectedSeatIds, retryCount]);
 
   // Render null while the redirect is pending (no flash of content)
   if (selectedSeatIds.size === 0 && showtimeId === null) return null;
 
   const sortedSeatIds = [...selectedSeatIds].sort();
   const total = selectedSeats.reduce((sum, s) => sum + s.price, 0);
+
+  function handleRetry() {
+    setLoadError(false);
+    setRetryCount((n) => n + 1);
+  }
 
   function handleConfirm() {
     if (!showtimeId || selectedSeats.length === 0) return;
@@ -139,7 +152,25 @@ export default function CheckoutPage() {
           Boletas ({selectedSeatIds.size})
         </h2>
 
-        {selectedSeats.length === 0 ? (
+        {loadError ? (
+          <div
+            role="alert"
+            data-testid="checkout-error"
+            className="flex flex-col items-start gap-3 rounded-lg bg-destructive/10 ring-1 ring-destructive/25 p-4"
+          >
+            <p className="flex items-start gap-2 text-sm text-foreground">
+              <AlertCircle
+                className="size-4 shrink-0 mt-0.5 text-destructive"
+                aria-hidden
+              />
+              No pudimos cargar tus boletas. Revisa tu conexión e inténtalo de
+              nuevo.
+            </p>
+            <Button variant="outline" size="sm" onClick={handleRetry}>
+              Reintentar
+            </Button>
+          </div>
+        ) : selectedSeats.length === 0 ? (
           /* Loading skeleton while the API call is in flight */
           <ul className="space-y-3" aria-label="Cargando boletas…">
             {Array.from(selectedSeatIds).map((id) => (

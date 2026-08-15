@@ -87,7 +87,7 @@ Emitted ONCE per conversation turn when the `recommend_best` tool returns. The p
   "businessDate": "YYYY-MM-DD | null",
   "time": "HH:MM | null",
   "formats": ["IMAX"],
-  "priceFrom": 32000,
+  "priceFrom": "int | null",
   "qualityTier": "low | optimal | high | null",
   "reasoning": "string",
   "alternatives": ["<Alternative>", "..."]

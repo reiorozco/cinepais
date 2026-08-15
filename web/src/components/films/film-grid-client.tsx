@@ -66,7 +66,7 @@ export function FilmGridClient({
     >
       {visibleFilms.map((film, index) => (
         <li key={film.id}>
-          <FilmCard film={film} preload={index < 6} />
+          <FilmCard film={film} priority={index < 6} />
         </li>
       ))}
     </ul>

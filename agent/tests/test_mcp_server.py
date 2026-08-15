@@ -170,6 +170,37 @@ async def test_search_showtimes_film_exists_no_showtimes():
     assert result["showtimes"] == []
 
 
+def _bulk_showtimes(count: int) -> list[dict]:  # type: ignore[type-arg]
+    """Clone the canonical showtime fixture `count` times with distinct ids."""
+    return [{**SHOWTIMES_PAYLOAD[0], "id": f"st-bulk-{i}"} for i in range(count)]
+
+
+@respx.mock
+async def test_search_showtimes_caps_results_and_flags_truncation():
+    """A bare call to the all-optional tool is bounded at 40 results and says so."""
+    respx.get("http://localhost:3000/api/showtimes").mock(
+        return_value=httpx.Response(200, json=_bulk_showtimes(65))
+    )
+    result = await search_showtimes()
+    assert len(result["showtimes"]) == 40
+    assert result["truncated"] is True
+    assert "hint" in result
+
+
+@respx.mock
+async def test_search_showtimes_narrow_query_is_not_truncated():
+    """A result set inside the bound is returned whole, with no truncation flag."""
+    respx.get("http://localhost:3000/api/films").mock(
+        return_value=httpx.Response(200, json=FILMS_PAYLOAD)
+    )
+    respx.get("http://localhost:3000/api/showtimes").mock(
+        return_value=httpx.Response(200, json=SHOWTIMES_PAYLOAD)
+    )
+    result = await search_showtimes(film_query="Odisea")
+    assert len(result["showtimes"]) == 1
+    assert not result.get("truncated")
+
+
 # ---------------------------------------------------------------------------
 # Tests: seat_availability
 # ---------------------------------------------------------------------------

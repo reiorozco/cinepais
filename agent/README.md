@@ -38,10 +38,11 @@ Copy `.env.example` to `.env` and fill in:
 |---|---|---|
 | `GOOGLE_API_KEY` | *(required)* | Gemini API key |
 | `WEB_API_BASE_URL` | `http://localhost:3000` | Web read API base URL |
-| `CORS_ORIGIN` | `http://localhost:3000` | Allowed CORS origin |
+| `CORS_ORIGIN` | `http://localhost:3000` | Allowed CORS origins — **comma-separated list**, whitespace trimmed, blank entries dropped (e.g. `http://localhost:3000,https://cinepais.vercel.app`). Vercel preview branches get their own domains, so production alone is not enough |
 | `MAX_OUTPUT_TOKENS` | `1024` | Max LLM output tokens (Gemini hang guard) |
 | `MAX_INPUT_CHARS` | `2000` | Max user message length |
 | `SESSION_QUERY_CAP` | `20` | Per-session query limit (best-effort, single-process) |
+| `DAILY_REQUEST_CAP` | `40` | Global budget of accepted `/chat` requests per **UTC** day, shared by every visitor. Sized against the ~USD 2.50 LLM credit: 40 × ~3.5 Gemini calls per request ≈ 140 generation calls. **Courtesy brake, not a hard ceiling** — the counter lives in this process, so it **resets on every cold start** (Fly scales to zero). The only real spend ceiling is the Google-side hard cap |
 | `AGENT_MODEL_OVERRIDE` | `gemini-3.6-flash` | Pin a specific model. Shipped pinned in `.env.example` to the validated model; clear it to use runtime discovery |
 | `LANGSMITH_TRACING` | *(empty)* | Set to `true` to enable LangSmith tracing |
 | `LANGSMITH_API_KEY` | *(empty)* | LangSmith API key |
@@ -125,7 +126,10 @@ See [`docs/sse-contract.md`](docs/sse-contract.md) for the full event schema and
 - **Per-IP rate limit**: 10 requests/minute (slowapi 0.1.10 decorator-only — `SlowAPIMiddleware` is intentionally omitted as it breaks SSE streaming).
 - **Input cap**: messages > 2000 characters are rejected with a Spanish error event.
 - **Session query cap**: 20 queries/session (resets after 1 hour or restart — courtesy limit, not a hard cost control).
-- **CORS**: restricted to `CORS_ORIGIN` (default: `http://localhost:3000`).
+- **Global daily request cap**: `DAILY_REQUEST_CAP` (default 40) accepted `/chat` requests per UTC day across all visitors, checked after the empty-message and length guards so malformed input never spends budget, and before the session cap so rotating a client-chosen `sessionId` cannot buy a fresh allowance. Over the cap the agent answers with a `daily_cap_exceeded` error event in Spanish. **Courtesy brake, not a hard ceiling — the counter is in-process and resets on every cold start.**
+- **Bounded tool output**: `search_showtimes` accepts all-optional filters, so a bare call would match the whole catalogue and be re-sent as input on every later LLM call in the turn. Results are capped at 40 with a `truncated: true` hint.
+- **Bounded agent loop**: `recursion_limit=8` on the LangGraph agent, down from the library default of 25, so a tool-error retry loop cannot multiply the ~3.5 LLM calls per request.
+- **CORS**: restricted to the origins listed in `CORS_ORIGIN` (comma-separated; default: `http://localhost:3000`). Only origins named there are allowed — the list is an allowlist, not a wildcard.
 - **Max tokens**: `MAX_OUTPUT_TOKENS` caps LLM output (Gemini 3.x thinking-hang guard).
 - **LangSmith tracing**: opt-in via env vars — disabled by default.
 - **[MANUAL — USER]** Rotate `GOOGLE_API_KEY` in Google AI Studio as a precaution if a key prefix appeared in any logs. The agent cannot execute this step automatically.
@@ -135,6 +139,9 @@ See [`docs/sse-contract.md`](docs/sse-contract.md) for the full event schema and
 Real cost defenses (active by default):
 - `MAX_OUTPUT_TOKENS=1024` — caps per-request LLM spend
 - `MAX_INPUT_CHARS=2000` — prevents prompt-stuffing
+- `DAILY_REQUEST_CAP=40` — global per-UTC-day request budget. **Read the caveat honestly: it is an in-process counter that resets on every cold start, so it bounds a single warm machine's day, not the bill.**
+- `recursion_limit=8` — bounds LLM calls per request
+- `search_showtimes` capped at 40 results — bounds tool output re-sent as LLM input
 - Per-IP rate limit — slows abuse
 - Model selection is pinned to `gemini-3.6-flash` — reliability over raw token price (see [Model fallback chain](#model-fallback-chain) for the cost tradeoff)
 
