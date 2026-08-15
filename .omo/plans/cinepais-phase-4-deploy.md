@@ -624,7 +624,7 @@ Count them in `.omo/evidence/llm-spend-cinepais-phase-4-deploy.txt`, appending o
   - **QA:** re-verify with **fixtures only** — zero further live spend.
   - **Evidence:** `task-32-…txt`.
 
-- [ ] 33. **Wave 5 close — HARD GATE. Do not start Todo 34 in this session.**
+- [x] 33. **Wave 5 close — HARD GATE. Do not start Todo 34 in this session.**
   - **Commit:** `feat(agent): Fly.io deployment — Dockerfile, fly.toml, scale-to-zero`
   - **Accept:** full gate exits 0 · `<WEB_URL>` and `https://cinepais-agent.fly.dev/health` both return 200 · both CORS transcripts (positive and negative) recorded · the live-spend file totals **exactly 2** `POST /chat` for this wave · `min_machines_running = 0` confirmed still set.
   - **STOP CONDITION:** complete only when `.omo/evidence/wave-5-closed-cinepais-phase-4-deploy.txt` exists. **End the session.**
