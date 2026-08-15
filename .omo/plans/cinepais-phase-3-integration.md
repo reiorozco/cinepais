@@ -43,6 +43,28 @@ Your next move: run `/start-work cinepais-phase-3-integration` in a fresh chat. 
 14. Four wave commits, conventional messages, no attribution lines, no push.
 15. A handoff file per wave at `.omo/handoff-fase-d-wave-<N>.md`, after which execution STOPS.
 
+### Authorized scope exception (added 2026-08-14 by the planner, after Wave 1)
+
+**The lint baseline was NOT clean when this plan was written, and the plan did not check it.** `pnpm lint`
+exit 0 is mandated as a wave gate, but Fase B code carried pre-existing `react-hooks/set-state-in-effect`
+errors, making the gate unreachable without repairing them. Wave 1 therefore modified three Fase B UI files.
+This is **authorized retroactively** — it was a plan defect, not executor overreach:
+
+| File | Change | Why it was unavoidable |
+|---|---|---|
+| `web/src/components/providers/city-provider.tsx` | `useState`+`useEffect` → `useSyncExternalStore` (`subscribe`/`getSnapshot`/`getServerSnapshot`) | pre-existing lint error; the first fix attempt (lazy `useState` initializer) caused a real SSR hydration mismatch, caught by live QA and reverted |
+| `web/src/components/films/showtimes-explorer.tsx` | `useEffect` retained with two justified `eslint-disable-next-line` comments | pre-existing lint error; the first fix attempt (key-based Accordion reset) silently broke first-cinema auto-expand, caught by live QA and reverted |
+| `web/src/components/seats/seat-map.tsx` | removed an unused `row` parameter from `SeatRow` | pre-existing `@typescript-eslint/no-unused-vars` warning |
+
+**F4 must NOT file these three as scope violations.** F4 MUST still verify that (a) each change is limited to
+what this table describes, and (b) the shipped implementation matches the table — specifically
+`useSyncExternalStore` in `city-provider.tsx` and the retained `useEffect` in `showtimes-explorer.tsx`, NOT the
+rejected first attempts that `.omo/handoff-fase-d-wave-1.md` §4 erroneously documents (see that file's
+ADDENDUM §C2).
+
+**This exception is closed.** It authorizes nothing beyond the three rows above. Wave 3's Todo 10 guardrail
+("must NOT modify `CityProvider`") remains in force for all remaining waves.
+
 ### Must NOT have (guardrails, anti-slop, scope boundaries)
 
 - **NO changes to `agent/`** — not one file. The SSE contract is FROZEN; the widget adapts to it.
@@ -84,6 +106,15 @@ Your next move: run `/start-work cinepais-phase-3-integration` in a fresh chat. 
 ### Waves and the handoff gate
 
 Four waves. **Each wave ends with a blocking handoff todo. When that todo completes, execution STOPS — the executor reports that the wave is done and instructs the user to open a fresh chat for the next wave.** This exists because a long plan in one chat degrades context quality; each wave is sized to finish comfortably inside one session.
+
+**Handoff correctness rules (added 2026-08-14 after the Wave 1 handoff shipped two defects — both are now mandatory checks before any handoff is committed):**
+
+1. **Never hardcode a date-derived value.** The Wave 1 handoff told the next session to seed `SEED_NOW=2026-08-01`, which by then was two weeks in the past; the 15-minute cutoff would have emptied `/api/showtimes` and Todo 8 would have failed looking like a code bug. Any handoff that mentions seeding MUST give the **recompute command**, never a literal date:
+   `SEED_NOW=$(python3 -c "from datetime import date, timedelta; print((date.today()+timedelta(days=1)).strftime('%Y-%m-%d'))")`
+   and MUST include the pre-flight `curl -s "http://localhost:3000/api/showtimes?filmId=film-01"` with the note that `[]` means re-seed.
+2. **A handoff's "what was built" section must be re-read against the actual files before committing.** The Wave 1 handoff's §4 *Verification* documented the two implementations QA had already REJECTED, contradicting its own §3. Before committing a handoff, open each file it describes and confirm the described code is what is actually there. A `Verification` section that disagrees with the shipped code is worse than no section — it is what a reviewer will cite.
+3. **Cross-reference todos by their title text, not by an invented numbering.** The Wave 1 handoff renumbered Todos 1-4 off by one against the plan.
+4. **State the resume point as the plan's todo number AND its title**, so a mismatch is self-evident.
 
 **Handoff file template** — every handoff writes `.omo/handoff-fase-d-wave-<N>.md` containing, in this order:
 
@@ -132,7 +163,7 @@ Four waves. **Each wave ends with a blocking handoff todo. When that todo comple
 
 ### Wave 1 — Transport core (pure logic, no UI)
 
-- [ ] 1. Repo: branch `phase-3-integration` + `NEXT_PUBLIC_AGENT_URL` config + copy SSE fixtures out of gitignored evidence - expect branch created, build green, fixtures tracked
+- [x] 1. Repo: branch `phase-3-integration` + `NEXT_PUBLIC_AGENT_URL` config + copy SSE fixtures out of gitignored evidence - expect branch created, build green, fixtures tracked
   What to do / Must NOT do:
     - FIRST, land the planning artifacts. `.omo/plans/cinepais-phase-3-integration.md`, `.omo/drafts/cinepais-phase-3-integration.md` and `.omo/boulder.json` are expected to be untracked/modified right now — they are this session's own inputs and are NOT gitignored (`.gitignore:26` covers only `.omo/evidence/`). Commit them on `phase-2-agent` before branching: `chore(omo): phase-3-integration planning artifacts and boulder state` (mirrors the Fase C precedent commit `682c3c4`). This also makes F4's later "plan prose unedited" diff meaningful — without it there is no baseline to diff against.
     - THEN verify the CODE trees are clean: `git status --porcelain -- web/ agent/` must be empty. If it is not, STOP and report — do not stash, do not commit someone else's work. Do NOT run a bare `git status --porcelain` as the gate; orchestrator state under `.omo/` is expected to move during execution and is authorized by §Commit strategy.
@@ -149,7 +180,7 @@ Four waves. **Each wave ends with a blocking handoff todo. When that todo comple
   QA scenarios: happy: `cd web && grep -c '^event: ' tests/fixtures/agent-sse/real-narrow-two-recommendations.txt` returns a non-zero count matching the number recorded in the fixtures README. failure: `git rev-parse --verify main` must FAIL (exit non-zero) — if it succeeds, a `main` branch was created out of scope; STOP and report. Evidence `/Users/reiorozco/Dev/cinepais/.omo/evidence/task-1-cinepais-phase-3-integration.txt`.
   Commit: N
 
-- [ ] 2. `web/src/lib/agent/events.ts`: Zod schemas mirroring the agent's Pydantic models exactly - expect a nullable-correct discriminated union with tests RED first
+- [x] 2. `web/src/lib/agent/events.ts`: Zod schemas mirroring the agent's Pydantic models exactly - expect a nullable-correct discriminated union with tests RED first
   What to do / Must NOT do:
     - TDD: write `web/tests/agent-events.test.ts` FIRST and prove it RED before implementing.
     - Mirror `agent/src/cinepais_agent/events.py` field-for-field using Zod 4 (already a dependency, `zod@^4.4.3`). Follow the existing style in `web/src/lib/api/schemas.ts`.
@@ -171,7 +202,7 @@ Four waves. **Each wave ends with a blocking handoff todo. When that todo comple
   QA scenarios: happy: a test parses the verbatim real `recommendation` payload from the fixture and asserts `alternatives.some(a => a.qualityTier === null)` where the fixture contains a soldout entry (if it does not, assert the count you measured in Todo 1 instead — do not invent one). failure: `parseAgentEvent("recommendation", '{"type":"recommendation"}')` returns `null` and does NOT throw. Evidence `/Users/reiorozco/Dev/cinepais/.omo/evidence/task-2-cinepais-phase-3-integration.txt`.
   Commit: N
 
-- [ ] 3. `web/src/lib/agent/sse.ts`: WHATWG-compliant incremental SSE frame parser - expect chunk-boundary splitting handled, tests RED first
+- [x] 3. `web/src/lib/agent/sse.ts`: WHATWG-compliant incremental SSE frame parser - expect chunk-boundary splitting handled, tests RED first
   What to do / Must NOT do:
     - TDD: write `web/tests/agent-sse.test.ts` FIRST and prove it RED.
     - Implement a stateful incremental parser: `createSseParser()` returning `{ feed(chunk: string): SseFrame[] }` where `SseFrame = { event: string; data: string }`. Pure and synchronous — no fetch, no DOM, no timers, so it runs in the existing node-env Vitest.
@@ -185,7 +216,7 @@ Four waves. **Each wave ends with a blocking handoff todo. When that todo comple
   QA scenarios: happy: byte-at-a-time replay of the real fixture yields the exact recorded event-type counts. failure: feeding `":heartbeat\n\n"` yields zero frames (comment correctly ignored, no phantom empty frame). Evidence `/Users/reiorozco/Dev/cinepais/.omo/evidence/task-3-cinepais-phase-3-integration.txt`.
   Commit: N
 
-- [ ] 4. `web/src/lib/agent/client.ts`: `streamChat()` over fetch + reader + AbortController - expect HTTP 429 and transport failures normalized into `error` events
+- [x] 4. `web/src/lib/agent/client.ts`: `streamChat()` over fetch + reader + AbortController - expect HTTP 429 and transport failures normalized into `error` events
   What to do / Must NOT do:
     - Implement `streamChat({ message, sessionId, signal, onEvent }): Promise<void>`: POST to `` `${AGENT_BASE_URL}/chat` `` with `content-type: application/json` and body `{ message, sessionId }`, pass `signal`, read `response.body.getReader()`, decode with `new TextDecoder()` using `{ stream: true }` (required so multi-byte Spanish characters split across chunks do not corrupt), feed the parser from Todo 3, validate each frame with `parseAgentEvent` from Todo 2, and invoke `onEvent` per valid event.
     - Non-OK responses carry NO SSE body. Map them to a synthetic `error` event: HTTP 429 → `{ type:"error", code:"rate_limit_exceeded", message:"Has superado el límite de solicitudes. Intenta de nuevo en un momento." }`; any other non-OK → `code:"http_error"` with a Spanish message. Attempt to read the agent's JSON error body first and prefer its `message` when present — the agent's Spanish copy always wins over ours. **Note the shape gap:** the live 429 body uses the key `"error"`, NOT `"code"` (`agent/src/cinepais_agent/main.py:87-91`), so read `message` only and hardcode `code: "rate_limit_exceeded"` yourself; reading `body.code` yields `undefined`.
@@ -201,7 +232,7 @@ Four waves. **Each wave ends with a blocking handoff todo. When that todo comple
   QA scenarios: happy: the fixture-driven test asserts the received event-type sequence equals the sequence measured from the fixture in Todo 1. failure: the abort test asserts `errorEvents.length === 0` — if an `AbortError` leaks through as a user-visible error, STOP and fix the catch, do not relax the assertion. Evidence `/Users/reiorozco/Dev/cinepais/.omo/evidence/task-4-cinepais-phase-3-integration.txt`.
   Commit: N
 
-- [ ] 5. Wave 1 close: commit + write `.omo/handoff-fase-d-wave-1.md` + STOP - expect a fresh chat can resume at Todo 6 with no other context
+- [x] 5. Wave 1 close: commit + write `.omo/handoff-fase-d-wave-1.md` + STOP - expect a fresh chat can resume at Todo 6 with no other context
   What to do / Must NOT do:
     - Run the full gate from `web/`: `pnpm test`, `pnpm lint`, `npx tsc --noEmit`, `pnpm build`. All four must exit 0. If any fails, STOP and report — do not commit a red tree.
     - Commit on `phase-3-integration`: `feat(web): agent SSE transport — WHATWG parser, Zod event schemas, streaming client`. No attribution lines. **No push.**
@@ -218,7 +249,7 @@ Four waves. **Each wave ends with a blocking handoff todo. When that todo comple
 
 ### Wave 2 — Pre-selection contract (deterministic HITL, still no chat UI)
 
-- [ ] 6. `preselect` action in `web/src/lib/business/selection.ts`: idempotent, rule-respecting seat assignment - expect existing toggle/clear tests untouched and green
+- [x] 6. `preselect` action in `web/src/lib/business/selection.ts`: idempotent, rule-respecting seat assignment - expect existing toggle/clear tests untouched and green
   What to do / Must NOT do:
     - TDD: extend `web/tests/selection.test.ts` (or add `web/tests/selection-preselect.test.ts`) FIRST, prove RED.
     - Add to the `SelectionAction` union — ADDITIVE ONLY:
@@ -235,7 +266,7 @@ Four waves. **Each wave ends with a blocking handoff todo. When that todo comple
   QA scenarios: happy: applying `["1_4_7","1_4_8"]` twice yields `selectedSeatIds.size === 2` both times with identical contents. failure: applying `["1_4_7","1_4_8","1_4_9","1_4_10","1_4_11"]` yields exactly 4 accepted and `error === "max"` — if it yields 5, the max rule was bypassed; STOP. Evidence `/Users/reiorozco/Dev/cinepais/.omo/evidence/task-6-cinepais-phase-3-integration.txt`.
   Commit: N
 
-- [ ] 7. `?preselect=` URL contract on `/showtimes/[id]` + SeatMap application + Spanish banner - expect seats highlighted from a hand-typed URL, no agent involved
+- [x] 7. `?preselect=` URL contract on `/showtimes/[id]` + SeatMap application + Spanish banner - expect seats highlighted from a hand-typed URL, no agent involved
   What to do / Must NOT do:
     - Read the relevant guide under `web/node_modules/next/dist/docs/` for `searchParams` in Next 16.3 BEFORE editing the page (`web/AGENTS.md` mandates this; the API is a Promise in this version).
     - `web/src/app/showtimes/[id]/page.tsx`: add `searchParams: Promise<{ preselect?: string }>` alongside the existing `params`, await it, and pass a parsed `preselectSeatIds: string[]` down to `<SeatMap>`. Parse by splitting on `,`, trimming, and dropping empties. Cap the parsed array at 8 entries before it ever reaches the reducer — a hostile URL must not drive an unbounded loop. Do NOT validate seat existence here; that is the reducer's job (Todo 6).
@@ -250,7 +281,7 @@ Four waves. **Each wave ends with a blocking handoff todo. When that todo comple
   QA scenarios: happy: covered end-to-end in Todo 8. failure: `pnpm build` must exit 0 — if adding `searchParams` breaks the build, read the bundled Next 16.3 docs rather than adding `export const dynamic`, which is banned by the Fase 0/1 convention. Evidence `/Users/reiorozco/Dev/cinepais/.omo/evidence/task-7-cinepais-phase-3-integration.txt`.
   Commit: N
 
-- [ ] 8. Playwright proof of the preselect contract using a hand-typed URL - expect green seats with ZERO LLM spend
+- [x] 8. Playwright proof of the preselect contract using a hand-typed URL - expect green seats with ZERO LLM spend
   What to do / Must NOT do:
     - Ensure the stack is up and the seed is valid. The agent evals require strictly-future showtimes and the web API applies a 15-minute cutoff, so re-seed with tomorrow as `SEED_NOW` if the calendar day rolled over: `SEED_NOW=$(python3 -c "from datetime import date, timedelta; print((date.today()+timedelta(days=1)).strftime('%Y-%m-%d'))")` then `cd web && TZ=America/Bogota SEED=20260801 SEED_NOW=$SEED_NOW pnpm prisma db seed`. Start dev: `cd web && (pnpm dev > /tmp/fase-d-web.log 2>&1 &)`, wait for HTTP 200 on `http://localhost:3000`.
     - **The agent must NOT be started for this todo. Zero Gemini spend. Zero `/chat` calls.**
@@ -268,7 +299,7 @@ Four waves. **Each wave ends with a blocking handoff todo. When that todo comple
   QA scenarios: happy: `[data-preselected="true"]` count === 2 on the happy URL. failure: the garbage URL must not throw — assert zero uncaught console errors via `browser_console_messages` at level `error`. Evidence `/Users/reiorozco/Dev/cinepais/.omo/evidence/task-8-cinepais-phase-3-integration.txt` + `task-8-preselect-happy.png`.
   Commit: N
 
-- [ ] 9. Wave 2 close: commit + write `.omo/handoff-fase-d-wave-2.md` + STOP - expect a fresh chat can resume at Todo 10
+- [x] 9. Wave 2 close: commit + write `.omo/handoff-fase-d-wave-2.md` + STOP - expect a fresh chat can resume at Todo 10
   What to do / Must NOT do:
     - Full gate from `web/`: `pnpm test`, `pnpm lint`, `npx tsc --noEmit`, `pnpm build` — all exit 0 or STOP.
     - Commit: `feat(web): HITL seat pre-selection — preselect reducer action + ?preselect= URL contract`. No attribution. No push.
@@ -283,7 +314,7 @@ Four waves. **Each wave ends with a blocking handoff todo. When that todo comple
 
 ### Wave 3 — Chat widget UI (fixture-verified, zero LLM spend)
 
-- [ ] 10. Copilot shell: floating bubble + panel mounted in the root layout - expect it visible on every route and surviving client navigation
+- [x] 10. Copilot shell: floating bubble + panel mounted in the root layout - expect it visible on every route and surviving client navigation
   What to do / Must NOT do:
     - Read the relevant bundled Next 16.3 guide before touching `layout.tsx` (`web/AGENTS.md` rule).
     - Create `web/src/components/copilot/copilot-widget.tsx` (`"use client"`): a fixed bottom-right launcher button and a panel that opens above it. Compose from installed shadcn primitives only — `button`, `card`, `badge`, `skeleton` are available; `accordion`, `dialog`, `select`, `tabs`, `sonner` also exist. **Do not run `shadcn add`**; if a primitive is missing, use a plain semantic element with Tailwind.
@@ -300,7 +331,7 @@ Four waves. **Each wave ends with a blocking handoff todo. When that todo comple
   QA scenarios: happy: open the panel on `/`, click through to a film, assert the panel is still open. failure: at a 390px-wide viewport, assert `document.documentElement.scrollWidth <= window.innerWidth` with the panel open — horizontal overflow is a real bug here because `<html>` clips it. Evidence `/Users/reiorozco/Dev/cinepais/.omo/evidence/task-10-cinepais-phase-3-integration.txt` + `task-10-copilot-shell.png`.
   Commit: N
 
-- [ ] 11. Conversation: streaming tokens, tool activity, input guard, session id, suggestion chips - expect a full turn rendered from a fixture with no agent running
+- [x] 11. Conversation: streaming tokens, tool activity, input guard, session id, suggestion chips - expect a full turn rendered from a fixture with no agent running
   What to do / Must NOT do:
     - Create `web/src/components/copilot/use-copilot-chat.ts` (`"use client"`): the state machine for a conversation. Holds an ordered message list (`user` | `assistant`), per-assistant-message accumulated text, a `status` of `idle | streaming | done | error`, the current tool activity label, the latest recommendation payload, and `{ sessionQueriesUsed, sessionQueryCap }` from the last `done` event.
     - Wire it to `streamChat` from Todo 4. Keep one `AbortController` in a ref; abort on unmount and when the user sends a new message. Aborting must not surface an error (Todo 4 already guarantees this).
@@ -317,7 +348,7 @@ Four waves. **Each wave ends with a blocking handoff todo. When that todo comple
   QA scenarios: happy: replay `real-broad.txt` via `page.route()` and assert the assistant bubble contains the FULL expected Spanish text once the turn settles. **Do NOT assert that text appeared incrementally or that a tool-activity label was visible mid-flight — `route.fulfill` delivers the whole body in one reader chunk (measured), so both are unobservable against a fixture and such a criterion is unsatisfiable.** Assert the tool-label MAPPING instead, deterministically: drive the hook's event handler directly (or export the pure `toolLabel(tool: string): string` map) and assert each of the five tool names yields its Spanish label. Incremental rendering is proven live in Todo 16. failure: replay a fixture whose stream contains ONLY `tool_call` + `recommendation` + `done` (no `token`) and assert no empty assistant bubble is rendered and no uncaught exception is thrown. Evidence `/Users/reiorozco/Dev/cinepais/.omo/evidence/task-11-cinepais-phase-3-integration.txt`.
   Commit: N
 
-- [ ] 12. Recommendation card + alternatives with honest sold-out rendering + CTA to preselect - expect soldout entries disabled on every outcome
+- [x] 12. Recommendation card + alternatives with honest sold-out rendering + CTA to preselect - expect soldout entries disabled on every outcome
   What to do / Must NOT do:
     - Create `web/src/components/copilot/recommendation-card.tsx` (`"use client"`), rendering ONLY from a validated `RecommendationEvent`.
     - Primary block, shown when `outcome` is `recommended` or `degraded`: `siteName · city`, formatted `businessDate` (reuse the `es-CO` UTC-safe formatting approach already in `web/src/app/showtimes/[id]/page.tsx:29-41` — parse as `T00:00:00Z`, never local time), `time`, `formats` badges, `priceFrom` via the existing `formatCOP`, a quality label in Spanish derived from `qualityTier` (`low` → "adelante", `optimal` → "óptima", `high` → "atrás"), the seat count, and `reasoning`.
@@ -334,7 +365,7 @@ Four waves. **Each wave ends with a blocking handoff todo. When that todo comple
   QA scenarios: happy: replay a fixture whose recommendation carries a sold-out alternative and assert exactly one alternative element is disabled and carries the "Agotada" badge, while the others remain clickable. failure: feed the card a `no_availability` payload with `priceFrom: null`, `showtimeId: null`, `qualityTier: null` and assert it renders without throwing and without printing the literal strings `null`, `NaN`, or `undefined` anywhere in its text content. Evidence `/Users/reiorozco/Dev/cinepais/.omo/evidence/task-12-cinepais-phase-3-integration.txt`.
   Commit: N
 
-- [ ] 13. Limits and failure states rendered gracefully - expect 429, session cap and an unreachable agent all produce calm Spanish, never a crash
+- [x] 13. Limits and failure states rendered gracefully - expect 429, session cap and an unreachable agent all produce calm Spanish, never a crash
   What to do / Must NOT do:
     - Render `error` events as a distinct, non-alarming bubble using the agent's own Spanish `message` verbatim. Only when no message is available (transport failure) use the widget's own copy from Todo 4.
     - `rate_limit_exceeded` (HTTP 429, no SSE body): show the message and disable the send button for 60 seconds with a visible countdown in Spanish, then re-enable. This is the one place a timer is justified — it prevents the user hammering a limit that is protecting the demo's budget.
@@ -349,7 +380,7 @@ Four waves. **Each wave ends with a blocking handoff todo. When that todo comple
   QA scenarios: happy: intercept `**/chat` with `page.route()` fulfilling HTTP 429 (no body) and assert a Spanish message renders, the send control is disabled, and a countdown is visible. failure: intercept with `route.abort("failed")` to simulate a dead agent/CORS rejection and assert the widget shows the Spanish unreachable message and remains open. **The console-error assertion here must EXCLUDE browser network-failure entries**: a 429 emits `Failed to load resource: … 429` and an abort emits `net::ERR_FAILED` — both were measured during planning and are the browser reporting a dead resource, not app defects. Assert instead that no entry remains after filtering out messages matching `Failed to load resource`, i.e. no uncaught exception and no React error boundary. Evidence `/Users/reiorozco/Dev/cinepais/.omo/evidence/task-13-cinepais-phase-3-integration.txt`.
   Commit: N
 
-- [ ] 14. Playwright fixture-replay E2E of the whole copilot flow - expect the full HITL loop proven with ZERO Gemini spend
+- [x] 14. Playwright fixture-replay E2E of the whole copilot flow - expect the full HITL loop proven with ZERO Gemini spend
   What to do / Must NOT do:
     - **The agent must NOT be running. Zero `/chat` calls to a real agent. Assert `:8000` is free before starting and record that in evidence.**
     - Start the web dev server (re-seed first if the calendar day rolled over — see Todo 8).
@@ -377,7 +408,7 @@ Four waves. **Each wave ends with a blocking handoff todo. When that todo comple
   QA scenarios: happy: the full chain — replay fixture, card renders, click CTA, land on the seat map with 2 preselected seats, panel still open. failure: on the two-recommendation fixture, assert the count of rendered recommendation cards for that turn is exactly 1 — if 2 render, last-wins was not implemented; STOP. Evidence `/Users/reiorozco/Dev/cinepais/.omo/evidence/task-14-cinepais-phase-3-integration.txt` + `task-14-hitl-money-shot.png`.
   Commit: N
 
-- [ ] 15. Wave 3 close: commit + write `.omo/handoff-fase-d-wave-3.md` + STOP - expect a fresh chat can resume at Todo 16
+- [x] 15. Wave 3 close: commit + write `.omo/handoff-fase-d-wave-3.md` + STOP - expect a fresh chat can resume at Todo 16
   What to do / Must NOT do:
     - Full gate from `web/`: `pnpm test`, `pnpm lint`, `npx tsc --noEmit`, `pnpm build` — all exit 0 or STOP.
     - Commit: `feat(web): CinePaís copilot widget — SSE chat, recommendation card, HITL preselect CTA`. No attribution. No push.
@@ -392,7 +423,8 @@ Four waves. **Each wave ends with a blocking handoff todo. When that todo comple
 
 ### Wave 4 — Live proof + docs (the only wave that spends Gemini credit)
 
-- [ ] 16. Live end-to-end proof against the real agent - expect 2 queries MAXIMUM, real CORS + streaming + preselect confirmed
+- [x] 16. Live end-to-end proof against the real agent - expect 2 queries MAXIMUM, real CORS + streaming + preselect confirmed
+  RESOLVED 2026-08-14: user gave explicit consent for exactly 2 real Gemini queries and confirmed `agent/.env` carries a valid `GOOGLE_API_KEY`. Pre-flight re-seed (`SEED_NOW=2026-08-15`) executed and the sold-out planted scenario (`st-site-med-1-imax-0-1400`, `availableCount: 0`) was re-verified on the FRESH seed before any spend. Exactly 2 `POST /chat` calls made and confirmed via `grep -c` on the raw agent log at three checkpoints (after query 2, after the 429 probe, and at final cleanup) — count never moved past 2. See `.omo/evidence/task-16-cinepais-phase-3-integration.txt` + `.omo/evidence/task-16-agent.log`.
   What to do / Must NOT do:
     - **BUDGET GATE: exactly 2 `POST /chat` calls. Not three. Count them and prove the count from the agent log.** If a run fails and a third call seems necessary, STOP and report rather than spending more.
     - Preconditions, in order: (1) web dev server on `:3000`; (2) DB seeded with `SEED_NOW` = tomorrow (`TZ=America/Bogota SEED=20260801 SEED_NOW=<tomorrow> pnpm prisma db seed`) — the 15-minute cutoff silently removes showtimes if the seed is stale, which manifests as a mysteriously empty agent answer; (3) pre-flight `curl -s http://localhost:3000/api/showtimes/st-site-med-1-imax-0-1400/seats` and confirm `summary.availableCount == 0`, proving the planted sold-out scenario is intact; (4) start the agent: `cd agent && uv run uvicorn cinepais_agent.main:app --port 8000`, capturing the log to a file.
@@ -411,7 +443,7 @@ Four waves. **Each wave ends with a blocking handoff todo. When that todo comple
   QA scenarios: happy: query 1 → card → CTA → preselected seats → panel open, all captured with raw values. failure: if a live turn emits an `error` event, capture the raw stream and STOP — do not retry into more spend and do not soften the criterion. Evidence `/Users/reiorozco/Dev/cinepais/.omo/evidence/task-16-cinepais-phase-3-integration.txt` + `task-16-live-hitl.png` + the raw agent log copied to `.omo/evidence/task-16-agent.log`.
   Commit: N
 
-- [ ] 17. Documentation: `web/README.md` copilot section + env var + preselect URL contract - expect a reader can run the whole thing from the docs alone
+- [x] 17. Documentation: `web/README.md` copilot section + env var + preselect URL contract - expect a reader can run the whole thing from the docs alone
   What to do / Must NOT do:
     - Add a **Copiloto (Fase D)** section to `web/README.md` covering: what the widget does; that it talks DIRECTLY to the agent (no Next proxy) and why in one line; `NEXT_PUBLIC_AGENT_URL` with its default and the note that Fase E repoints it at Fly.io while `CORS_ORIGIN` on the agent must be repointed at the Vercel domain; the exact commands to run both halves locally (web on `:3000`, agent on `:8000`, plus the `SEED_NOW` seed rule); and the `?preselect=` URL contract with a worked example using the real ids from Todo 8.
     - Update the existing **UI pages** table in `web/README.md` to note that `/showtimes/[id]` now accepts `?preselect=`.
@@ -425,7 +457,7 @@ Four waves. **Each wave ends with a blocking handoff todo. When that todo comple
   QA scenarios: happy: a reader following only `web/README.md` §Copiloto can start both servers and reach a preselected seat map. failure: `git diff --name-only phase-2-agent -- agent/` must be EMPTY — if any agent file changed, STOP; the frozen contract was violated. Evidence `/Users/reiorozco/Dev/cinepais/.omo/evidence/task-17-cinepais-phase-3-integration.txt`.
   Commit: N
 
-- [ ] 18. Wave 4 close: commit + write `.omo/handoff-fase-d-final.md` + hand off to the final verification wave
+- [x] 18. Wave 4 close: commit + write `.omo/handoff-fase-d-final.md` + hand off to the final verification wave
   What to do / Must NOT do:
     - Full gate from `web/`: `pnpm test`, `pnpm lint`, `npx tsc --noEmit`, `pnpm build` — all exit 0 or STOP.
     - Commit: `docs(web): copilot integration guide, preselect URL contract, agent env var`. No attribution. No push.
@@ -443,16 +475,16 @@ Four waves. **Each wave ends with a blocking handoff todo. When that todo comple
 
 > Runs after ALL todos. Lanes run in parallel BUT must not fight over shared state: **no lane switches branches, no lane re-seeds the DB, and only one lane at a time drives a browser.** (Fase B lost a review round to parallel reviewers colliding on `git checkout` and double-seeding.) All four must APPROVE. Results are surfaced to the user, who gives the final okay. **Zero LLM spend: no lane starts the agent.**
 
-- [ ] F1. Plan compliance audit - every todo's acceptance criteria independently re-verified
+- [x] F1. Plan compliance audit - every todo's acceptance criteria independently re-verified
   Re-run every acceptance criterion in Todos 1-18 from a clean shell and record raw output. Confirm each todo's evidence file exists and that its numbers were derived from real captures, not narrative. Pair every negative-result grep with a positive control proving the grep could have matched (Fase C rule — a silently-broken grep also returns 0). Flag any criterion that is stale or unsatisfiable as written, citing the superseding text. Do NOT re-run the live agent. Evidence `/Users/reiorozco/Dev/cinepais/.omo/evidence/f1-wave-cinepais-phase-3-integration.md`.
 
-- [ ] F2. Code quality review - conventions, dead code, and the no-new-dependency guarantee
+- [x] F2. Code quality review - conventions, dead code, and the no-new-dependency guarantee
   Verify: `git diff phase-2-agent -- web/package.json` shows NO new runtime dependency and no jsdom/testing-library/playwright addition; every new file is English-named with English identifiers and comments while all user-visible strings are Spanish; no file added by this phase exceeds a reasonable size without justification; no dead constants or unused exports in `web/src/lib/agent/` or `web/src/components/copilot/`; no `any`; `pnpm lint` and `npx tsc --noEmit` exit 0. Confirm no direct writes to `selectedSeatIds` outside the reducer and that `toggle`/`clear`/`orphan.ts` are behaviourally unchanged. Evidence `/Users/reiorozco/Dev/cinepais/.omo/evidence/f2-wave-cinepais-phase-3-integration.md`.
 
-- [ ] F3. Hands-on QA - drive the real UI, fixtures only
+- [x] F3. Hands-on QA - drive the real UI, fixtures only
   Start the web server, re-seed if the day rolled over, and personally exercise: the manual purchase flow from Fase B (regression — the widget must not have broken it), the copilot panel across three routes, panel persistence across client navigation, the preselect URL by hand, the over-cap and wheelchair refusal cases, the 429 and unreachable paths via `page.route()`, and the 2000-char guard. Parse every JSON payload per-event rather than trusting whole-stream greps (Fase C round-6 rule). Assert zero console errors. Do NOT start the agent. Evidence `/Users/reiorozco/Dev/cinepais/.omo/evidence/f3-wave-cinepais-phase-3-integration.md` + screenshots.
 
-- [ ] F4. Scope fidelity - nothing added, nothing dropped, nothing frozen was touched
+- [x] F4. Scope fidelity - nothing added, nothing dropped, nothing frozen was touched
   Verify: `git diff --name-only phase-2-agent -- agent/` is EMPTY; no `main` branch exists; nothing was pushed; exactly 4 wave commits; all four handoff files exist with their 8 sections; every §Must NOT have guardrail holds (grep for each banned dependency by name); no plan prose or acceptance criterion was edited by the executor (`git diff phase-2-agent -- .omo/plans/cinepais-phase-3-integration.md` should show checkbox flips only — enumerate every changed line and classify it). Confirm no key material anywhere: `grep -rnE "AIza[0-9A-Za-z_-]{20,}|AQ\.[A-Za-z0-9_-]{20,}" web/ .omo/` returns zero. Evidence `/Users/reiorozco/Dev/cinepais/.omo/evidence/f4-wave-cinepais-phase-3-integration.md`.
 
 ## Commit strategy

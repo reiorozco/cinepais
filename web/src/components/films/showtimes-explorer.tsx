@@ -192,11 +192,12 @@ export function ShowtimesExplorer({ showtimes }: ShowtimesExplorerProps) {
   // when the component remounts, so we drive the open panel ourselves and
   // auto-open the first cinema whenever the site list identity changes
   // (city / date / format switch).
-  const [expandedSites, setExpandedSites] = useState<string[]>([]);
   const siteNamesKey = siteNames.join("|");
+  const [expandedSites, setExpandedSites] = useState<string[]>([]);
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting UI state in response to a derived-value change (siteNames) is a documented exception to this rule; the alternative (key-based reset) doesn't work with controlled components that own their state in the parent
     setExpandedSites(siteNames.length > 0 ? [siteNames[0]!] : []);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- siteNamesKey is derived from siteNames and captures the identity change; using siteNamesKey instead of siteNames avoids unnecessary re-runs when siteNames array reference changes but content doesn't
   }, [siteNamesKey]);
 
   const today = todayInBogota();
@@ -291,15 +292,15 @@ export function ShowtimesExplorer({ showtimes }: ShowtimesExplorerProps) {
             title="No hay funciones este día en este formato"
             description="Cambia de fecha o de formato para ver más opciones."
           />
-        ) : (
-          <Accordion
-            multiple
-            value={expandedSites}
-            onValueChange={(v) => {
-              if (Array.isArray(v)) setExpandedSites(v as string[]);
-            }}
-            className="rounded-xl border border-border bg-card"
-          >
+         ) : (
+           <Accordion
+             multiple
+             value={expandedSites}
+             onValueChange={(v) => {
+               if (Array.isArray(v)) setExpandedSites(v as string[]);
+             }}
+             className="rounded-xl border border-border bg-card"
+           >
             {siteNames.map((siteName) => {
               const items = bySite[siteName];
               const formatSummary = summarizeFormats(items);

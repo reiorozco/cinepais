@@ -6,6 +6,7 @@ import { CityProvider } from "@/components/providers/city-provider";
 import { SelectionProvider } from "@/components/providers/selection-provider";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
+import { CopilotWidget } from "@/components/copilot/copilot-widget";
 import { getCities } from "@/lib/api/queries";
 
 const geistSans = Geist({
@@ -44,6 +45,11 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             <Header cities={cities} />
             <div className="flex-1">{children}</div>
             <Footer />
+            {/* Mounted here on purpose: inside `SelectionProvider` (later
+                todos read the seat selection) and inside the root layout, which
+                the App Router does not remount on client-side navigation — so
+                the copilot panel survives a `router.push` to the seat map. */}
+            <CopilotWidget />
           </SelectionProvider>
         </CityProvider>
         <Toaster />

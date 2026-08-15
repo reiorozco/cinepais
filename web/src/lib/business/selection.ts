@@ -29,7 +29,21 @@ export type SelectionAction =
       /** 1-based inclusive block ranges for the room, e.g. [[1,5],[6,15],[16,20]] */
       blocks: [number, number][];
     }
+  | {
+      type: "preselect";
+      showtimeId: string;
+      /** Requested seat ids, in priority order. Unknown ids are dropped. */
+      seatIds: string[];
+      /** Every seat of the room keyed by row (used for the orphan check). */
+      rowSeatsByRow: Map<number, SeatForSelection[]>;
+      /** Every seat of the room keyed by seatId (used to resolve seatIds). */
+      seatsById: Map<string, SeatForSelection>;
+      /** 1-based inclusive block ranges for the room, e.g. [[1,5],[6,15],[16,20]] */
+      blocks: [number, number][];
+    }
   | { type: "clear" };
+
+type PreselectAction = Extract<SelectionAction, { type: "preselect" }>;
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -57,6 +71,7 @@ const EMPTY_STATE: SelectionState = {
  *   (c) toggling off is always allowed (no orphan check on deselect)
  *   (d) dedup by seatId (toggle = add or remove)
  *   (e) showtimeId mismatch → clear existing selection first
+ *   (f) preselect assigns instead of toggling — see applyPreselect below
  *
  * INDEXING CONTRACT
  *   - seat.col / rowSeats[].col are 1-based
@@ -75,6 +90,7 @@ export function selectionReducer(
   action: SelectionAction,
 ): SelectionState {
   if (action.type === "clear") return EMPTY_STATE;
+  if (action.type === "preselect") return applyPreselect(action);
 
   const { showtimeId, seat, rowSeats, blocks } = action;
 
@@ -141,4 +157,64 @@ export function selectionReducer(
   }
 
   return { showtimeId, selectedSeatIds: candidateIds, error: null };
+}
+
+// ---------------------------------------------------------------------------
+// Pre-selection (copilot hand-off)
+// ---------------------------------------------------------------------------
+
+/**
+ * Assigns a copilot-proposed selection. Unlike toggle this is IDEMPOTENT: it
+ * ignores the incoming state and rebuilds from EMPTY_STATE, so replaying the
+ * same action yields the same result. React 19 StrictMode double-invokes
+ * effects in dev, and a loop of toggle actions would silently deselect
+ * everything.
+ *
+ * Every candidate is admitted through the toggle branch above, so max-4, the
+ * per-block orphan rule and the wheelchair-as-Sold exemption are enforced by
+ * exactly the code the manual click flow uses — there is no second
+ * implementation that can drift.
+ *
+ * error carries the FIRST rule violation encountered ("max" | "orphan").
+ * Seats dropped for a reason with no existing error code — unknown id, sold,
+ * wheelchair, unindexed row — leave error null; the UI reports the count
+ * difference instead.
+ */
+function applyPreselect(action: PreselectAction): SelectionState {
+  const { showtimeId, seatIds, rowSeatsByRow, seatsById, blocks } = action;
+
+  // A pre-selection replaces any prior selection rather than adding to it.
+  let accepted: SelectionState = { ...EMPTY_STATE, showtimeId };
+  let error: SelectionState["error"] = null;
+  const requested = new Set<string>();
+
+  for (const seatId of seatIds) {
+    // A repeated id must never toggle an already-accepted seat back off.
+    if (requested.has(seatId)) continue;
+    requested.add(seatId);
+
+    const seat = seatsById.get(seatId);
+    if (seat === undefined) continue;
+    if (seat.status !== "Available") continue;
+    if (seat.areaCategory === "wheelchair") continue;
+
+    const rowSeats = rowSeatsByRow.get(seat.row);
+    if (rowSeats === undefined) continue;
+
+    const next = selectionReducer(accepted, {
+      type: "toggle",
+      showtimeId,
+      seat,
+      rowSeats,
+      blocks,
+    });
+
+    if (next.error !== null) {
+      error ??= next.error;
+      continue;
+    }
+    accepted = next;
+  }
+
+  return { showtimeId, selectedSeatIds: accepted.selectedSeatIds, error };
 }

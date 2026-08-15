@@ -1,0 +1,30 @@
+: SYNTHETIC FIXTURE — NOT a captured agent run.
+: Derived from agent/docs/sse-contract.md §recommendation (Outcome branch
+: contract: "no_availability: showtimeId is null AND seatIds == [] (alternatives
+: SHOULD be populated)"), §Widening (outcomes `no_availability` / `degraded`)
+: — at most 3 widened entries — and §Soldout tradeoff entries, which states the
+: `qualityTier: null` / "esta función está agotada" entry is outcome-agnostic and
+: is the one entry allowed past the widening cap of 3.
+: All four real/prior fixtures in this directory carry outcome `recommended`
+: only (verified by grep), so `no_availability` had to be authored.
+: Showtime ids are REAL currently-seeded ids (each resolves 200 on
+: GET /api/showtimes/<id>/seats); st-site-med-1-imax-0-1400 is the planted
+: `soldout` scenario and really reports availableCount 0.
+event: tool_call
+data: {"type":"tool_call","tool":"recommend_best","input":{"film_query":"La Odisea","city":"Medellín","format":"IMAX","date":"2026-08-15","n":3}}
+
+event: recommendation
+data: {"type":"recommendation","outcome":"no_availability","showtimeId":null,"filmId":null,"seatIds":[],"requestedN":3,"siteName":null,"city":null,"businessDate":null,"time":null,"formats":[],"priceFrom":null,"qualityTier":null,"reasoning":"No encontré 3 sillas juntas en IMAX en Medellín para el 15 de agosto. Te dejo otras funciones cercanas que sí tienen disponibilidad.","alternatives":[{"showtimeId":"st-site-med-1-imax-0-2245","filmId":"film-01","siteName":"CinePaís El Poblado","businessDate":"2026-08-15","time":"22:45","formats":["IMAX"],"priceFrom":32000,"qualityTier":"optimal","reason":"horario alternativo"},{"showtimeId":"st-site-med-1-2d-1-0-2100","filmId":"film-01","siteName":"CinePaís El Poblado","businessDate":"2026-08-15","time":"21:00","formats":["2D"],"priceFrom":18000,"qualityTier":"optimal","reason":"otro formato disponible"},{"showtimeId":"st-site-med-2-2d-1-0-2245","filmId":"film-01","siteName":"CinePaís Laureles","businessDate":"2026-08-15","time":"22:45","formats":["2D"],"priceFrom":18000,"qualityTier":"high","reason":"otro formato disponible"},{"showtimeId":"st-site-med-1-imax-0-1400","filmId":"film-01","siteName":"CinePaís El Poblado","businessDate":"2026-08-15","time":"14:00","formats":["IMAX"],"priceFrom":32000,"qualityTier":null,"reason":"esta función está agotada"}]}
+
+event: token
+data: {"type":"token","content":"No encontré 3 sillas juntas en **IMAX** en Medellín para el 15 de agosto."}
+
+event: token
+data: {"type":"token","content":"\n\nLa función de las 14:00 en **CinePaís El Poblado** está agotada."}
+
+event: token
+data: {"type":"token","content":"\n\nTe dejo tres opciones cercanas para el mismo día que sí tienen sillas disponibles."}
+
+event: done
+data: {"type":"done","sessionQueriesUsed":3,"sessionQueryCap":20}
+

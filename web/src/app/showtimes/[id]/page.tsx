@@ -40,6 +40,38 @@ function formatShowtimeDate(businessDate: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
+// ---------------------------------------------------------------------------
+// `?preselect=` URL contract
+// ---------------------------------------------------------------------------
+
+/** Business max is 4 seats; 8 leaves slack for dropped candidates while
+ *  keeping a hostile `?preselect=a,a,…×10000` from driving an unbounded loop. */
+const MAX_PRESELECT_IDS = 8;
+
+/**
+ * Tames the raw `?preselect=` string. Seat existence, availability and
+ * adjacency are the reducer's job — checking them here would create a second
+ * rule implementation that can drift.
+ *
+ * The `typeof` guard is NOT redundant with the annotation: Next resolves a
+ * repeated key (`?preselect=a&preselect=b`) to `string[]`, which is outside
+ * the declared type but well inside what a user can type.
+ */
+function parsePreselectParam(raw: string | undefined): string[] {
+  if (typeof raw !== "string") return [];
+  return raw
+    .split(",")
+    .map((seatId) => seatId.trim())
+    .filter((seatId) => seatId.length > 0)
+    .slice(0, MAX_PRESELECT_IDS);
+}
+
+type SeatMapPageProps = {
+  params: Promise<{ id: string }>;
+  /** `?preselect=<seatId>,<seatId>` — the copilot hand-off contract. */
+  searchParams: Promise<{ preselect?: string }>;
+};
+
 /**
  * Seat map route. Server component: reads the seed data via `getSeats` and
  * `getFilmDetail`, renders the film + function metadata (info card), then
@@ -48,13 +80,19 @@ function formatShowtimeDate(businessDate: string): string {
  * Data is passed to the client as plain props — the reducer/context (see
  * `SelectionProvider`) is the single source of truth for the current
  * selection; the seats list itself never enters context state.
+ *
+ * `params` and `searchParams` are both Promises in Next 16. Reading
+ * `searchParams` opts this route out of prerendering on its own — do NOT add
+ * a route-segment config to force it.
  */
 export default async function SeatMapPage({
   params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+  searchParams,
+}: SeatMapPageProps) {
   const { id } = await params;
+  const { preselect } = await searchParams;
+
+  const preselectSeatIds = parsePreselectParam(preselect);
 
   const data = await getSeats(id);
   if (!data) notFound();
@@ -69,6 +107,7 @@ export default async function SeatMapPage({
         showtime={data.showtime}
         seats={data.seats}
         summary={data.summary}
+        preselectSeatIds={preselectSeatIds}
       />
     </main>
   );

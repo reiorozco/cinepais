@@ -1,0 +1,19 @@
+: SYNTHETIC FIXTURE — NOT a captured agent run.
+: Derived from agent/docs/sse-contract.md §Event ordering (tool turns), which
+: documents `token` events as possibly absent: "token events may be absent on
+: tool-only turns — render the recommendation card without waiting for
+: preceding text". None of the three real captures in this directory exercises
+: that shape, so this stream was authored to cover it.
+: Payload fields follow §recommendation and §Alternative; the ids, site names
+: and prices mirror the planted `front-only` seed scenario (La Odisea / film-01,
+: site-med-2, imax, only rows 1-2 available) and the planted `soldout` scenario
+: (st-site-med-1-imax-0-1400) for the sold-out alternative.
+event: tool_call
+data: {"type":"tool_call","tool":"recommend_best","input":{"film_query":"La Odisea","city":"Medellín","format":"IMAX","n":2}}
+
+event: recommendation
+data: {"type":"recommendation","outcome":"recommended","showtimeId":"st-site-med-2-imax-1-1930","filmId":"film-01","seatIds":["1_1_7","1_1_8"],"requestedN":2,"siteName":"CinePaís Laureles","city":"Medellín","businessDate":"2026-08-15","time":"19:30","formats":["IMAX"],"priceFrom":32000,"qualityTier":"low","reasoning":"Encontré 2 sillas juntas en fila 1 (zona adelante) en CinePaís Laureles a las 19:30. Es lo único contiguo que queda en esta función.","alternatives":[{"showtimeId":"st-site-med-3-premium-0-2100","filmId":"film-01","siteName":"CinePaís Envigado","businessDate":"2026-08-15","time":"21:00","formats":["Premium"],"priceFrom":24000,"qualityTier":"optimal","reason":"mejor calidad de silla"},{"showtimeId":"st-site-med-1-imax-0-1400","filmId":"film-01","siteName":"CinePaís El Poblado","businessDate":"2026-08-15","time":"14:00","formats":["IMAX"],"priceFrom":32000,"qualityTier":null,"reason":"esta función está agotada"}]}
+
+event: done
+data: {"type":"done","sessionQueriesUsed":2,"sessionQueryCap":20}
+

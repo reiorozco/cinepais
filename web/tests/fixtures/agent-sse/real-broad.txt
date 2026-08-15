@@ -1,0 +1,42 @@
+event: tool_call
+data: {"type":"tool_call","tool":"recommend_best","input":{"film_query":"Sombras del Puente","city":"Medellín"}}
+
+event: recommendation
+data: {"type":"recommendation","outcome":"recommended","showtimeId":"st-site-med-2-premium-0-1400","filmId":"film-02","seatIds":["1_4_1"],"requestedN":1,"siteName":"CinePaís Laureles","city":"Medellín","businessDate":"2026-08-14","time":"14:00","formats":["Premium"],"priceFrom":24000,"qualityTier":"optimal","reasoning":"Encontré 1 sillas juntas en fila 4 (zona óptima) en CinePaís Laureles a las 14:00.","alternatives":[{"showtimeId":"st-site-med-3-premium-0-2100","filmId":"film-02","siteName":"CinePaís Envigado","businessDate":"2026-08-14","time":"21:00","formats":["Premium"],"priceFrom":24000,"qualityTier":"optimal","reason":"mejor calidad de silla"},{"showtimeId":"st-site-med-1-2d-1-2-1400","filmId":"film-02","siteName":"CinePaís El Poblado","businessDate":"2026-08-16","time":"14:00","formats":["2D"],"priceFrom":18000,"qualityTier":"optimal","reason":"mejor calidad de silla"},{"showtimeId":"st-site-med-1-2d-2-2-1700","filmId":"film-02","siteName":"CinePaís El Poblado","businessDate":"2026-08-16","time":"17:00","formats":["2D"],"priceFrom":18000,"qualityTier":"optimal","reason":"mejor calidad de silla"},{"showtimeId":"st-site-med-1-imax-0-1400","filmId":"film-02","siteName":"CinePaís El Poblado","businessDate":"2026-08-14","time":"14:00","formats":["IMAX"],"priceFrom":32000,"qualityTier":null,"reason":"esta función está agotada"}]}
+
+event: token
+data: {"type":"token","content":"Sí, hay sillas disponibles para **Sombras del Puente** en"}
+
+event: token
+data: {"type":"token","content":" Medellín.\n\n### **Opción recomendada**\n* **Cine:** CinePaís Laureles\n* **Fecha y"}
+
+event: token
+data: {"type":"token","content":" hora:** 14 de agosto de 2026 a las 14:00\n* **"}
+
+event: token
+data: {"type":"token","content":"Formato:** Premium\n* **Precio:** Desde $24.000\n* **Ubicación/"}
+
+event: token
+data: {"type":"token","content":"Calidad:** Sillas disponibles en zona óptima (Fila 4).\n\n---\n\n### **Otras alternativas disponibles"}
+
+event: token
+data: {"type":"token","content":":**\n1. **CinePaís Envigado**  \n   * **Fecha y hora:** 14 de"}
+
+event: token
+data: {"type":"token","content":" agosto a las 21:00  \n   * **Formato:** Premium | **Precio:** $24.000"}
+
+event: token
+data: {"type":"token","content":"  \n\n2. **CinePaís El Poblado**  \n   * **Fecha y hora:** 16 de"}
+
+event: token
+data: {"type":"token","content":" agosto a las 14:00 y 17:00  \n   * **Formato:**"}
+
+event: token
+data: {"type":"token","content":" 2D | **Precio:** $18.000  \n\n¿Para cuántas personas deseas comprar las entradas o"}
+
+event: token
+data: {"type":"token","content":" qué horario prefieres?"}
+
+event: done
+data: {"type":"done","sessionQueriesUsed":1,"sessionQueryCap":20}
+

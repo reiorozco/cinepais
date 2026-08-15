@@ -1,0 +1,62 @@
+event: tool_call
+data: {"type":"tool_call","tool":"search_showtimes","input":{"date":"2026-08-14","film_query":"Sombras del Puente","format":"IMAX"}}
+
+event: tool_call
+data: {"type":"tool_call","tool":"adjacent_seats","input":{"showtime_id":"st-site-med-1-imax-0-1400","n":2}}
+
+event: tool_call
+data: {"type":"tool_call","tool":"seat_availability","input":{"showtime_id":"st-site-med-1-imax-0-1400"}}
+
+event: tool_call
+data: {"type":"tool_call","tool":"recommend_best","input":{"city":"Medellín","film_query":"Sombras del Puente","n":2,"date_range":"2026-08-14"}}
+
+event: recommendation
+data: {"type":"recommendation","outcome":"recommended","showtimeId":"st-site-med-2-premium-0-1400","filmId":"film-02","seatIds":["1_4_1","1_4_2"],"requestedN":2,"siteName":"CinePaís Laureles","city":"Medellín","businessDate":"2026-08-14","time":"14:00","formats":["Premium"],"priceFrom":24000,"qualityTier":"optimal","reasoning":"Encontré 2 sillas juntas en fila 4 (zona óptima) en CinePaís Laureles a las 14:00.","alternatives":[{"showtimeId":"st-site-med-3-premium-0-2100","filmId":"film-02","siteName":"CinePaís Envigado","businessDate":"2026-08-14","time":"21:00","formats":["Premium"],"priceFrom":24000,"qualityTier":"optimal","reason":"mejor calidad de silla"},{"showtimeId":"st-site-med-1-imax-0-1400","filmId":"film-02","siteName":"CinePaís El Poblado","businessDate":"2026-08-14","time":"14:00","formats":["IMAX"],"priceFrom":32000,"qualityTier":null,"reason":"esta función está agotada"}]}
+
+event: tool_call
+data: {"type":"tool_call","tool":"recommend_best","input":{"date_range":"semana","format":"IMAX","film_query":"Sombras del Puente","city":"Medellín","n":2}}
+
+event: recommendation
+data: {"type":"recommendation","outcome":"recommended","showtimeId":"st-site-med-2-imax-5-1930","filmId":"film-02","seatIds":["1_4_1","1_4_2"],"requestedN":2,"siteName":"CinePaís Laureles","city":"Medellín","businessDate":"2026-08-19","time":"19:30","formats":["IMAX"],"priceFrom":19000,"qualityTier":"optimal","reasoning":"Encontré 2 sillas juntas en fila 4 (zona óptima) en CinePaís Laureles a las 19:30.","alternatives":[{"showtimeId":"st-site-med-1-imax-0-1400","filmId":"film-02","siteName":"CinePaís El Poblado","businessDate":"2026-08-14","time":"14:00","formats":["IMAX"],"priceFrom":32000,"qualityTier":null,"reason":"esta función está agotada"}]}
+
+: ping - 2026-08-13 07:56:43.814926+00:00
+
+event: token
+data: {"type":"token","content":"La función de **Sombras del Puente** en formato **IMAX**"}
+
+event: token
+data: {"type":"token","content":" en **CinePaís El Poblado** para el **14 de agosto de 2026 ("}
+
+event: token
+data: {"type":"token","content":"14:00)** se encuentra **agotada**.\n\nAquí tienes las mejores alternativas disponibles para 2 personas:\n\n### "}
+
+event: token
+data: {"type":"token","content":"1. Para el mismo día (14 de agosto de 2026)\n* **CinePaís Laure"}
+
+event: token
+data: {"type":"token","content":"les** — **14:00** (Formato Premium)\n  * **Precio:** Desde $24."}
+
+event: token
+data: {"type":"token","content":"000 por silla\n  * **Sillas juntas:** Fila 4 (zona óptima)\n\n*"}
+
+event: token
+data: {"type":"token","content":" **CinePaís Envigado** — **21:00** (Formato Premium)\n  "}
+
+event: token
+data: {"type":"token","content":"* **Precio:** Desde $24.000 por silla\n\n---\n\n### 2. Para formato IMAX"}
+
+event: token
+data: {"type":"token","content":" (otra fecha)\n* **CinePaís Laureles** — **19 de agosto de 20"}
+
+event: token
+data: {"type":"token","content":"26 a las 19:30**\n  * **Precio:** Desde $19.00"}
+
+event: token
+data: {"type":"token","content":"0 por silla\n  * **Sillas juntas:** Fila 4 (zona óptima)\n\n¿Te gustaría"}
+
+event: token
+data: {"type":"token","content":" que te reserve o brinde más información sobre alguna de estas opciones?"}
+
+event: done
+data: {"type":"done","sessionQueriesUsed":1,"sessionQueryCap":20}
+

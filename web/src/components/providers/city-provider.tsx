@@ -3,8 +3,8 @@
 import {
   createContext,
   useContext,
+  useSyncExternalStore,
   useState,
-  useEffect,
   type ReactNode,
 } from "react";
 
@@ -37,17 +37,30 @@ const CityContext = createContext<CityContextValue | null>(null);
  * then re-reads localStorage in a useEffect so the client reflects any stored value.
  */
 export function CityProvider({ children }: { children: ReactNode }) {
-  const [city, setCity] = useState<string>(DEFAULT_CITY);
+  // Track manual city selection (overrides external store)
+  const [override, setOverride] = useState<string | null>(null);
 
-  // Re-read from localStorage after mount (client-only)
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) setCity(stored);
-  }, []);
+  // Read from localStorage as an external store (SSR-safe via getServerSnapshot)
+  const city = useSyncExternalStore(
+    (callback) => {
+      // Subscribe to storage events (e.g., other tabs changing the city)
+      window.addEventListener("storage", callback);
+      return () => window.removeEventListener("storage", callback);
+    },
+    () => {
+      // Client snapshot: return override if set, else read localStorage
+      if (override !== null) return override;
+      return localStorage.getItem(STORAGE_KEY) ?? DEFAULT_CITY;
+    },
+    () => {
+      // Server snapshot: always return DEFAULT_CITY (no localStorage on server)
+      return DEFAULT_CITY;
+    }
+  );
 
-  // Persist to localStorage whenever city changes (after initial mount)
+  // Persist to localStorage and update override whenever city changes
   function handleSetCity(next: string) {
-    setCity(next);
+    setOverride(next);
     localStorage.setItem(STORAGE_KEY, next);
   }
 

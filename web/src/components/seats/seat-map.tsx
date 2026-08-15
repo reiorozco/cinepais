@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Accessibility, ArrowLeft } from "lucide-react";
+import { Accessibility, ArrowLeft, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -28,6 +28,8 @@ type SeatMapProps = {
   showtime: Showtime;
   seats: Seat[];
   summary: SeatSummary;
+  /** Seat ids proposed via `?preselect=`. Already length-capped by the page. */
+  preselectSeatIds?: string[];
 };
 
 const ROW_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -35,6 +37,7 @@ const ZOOM_LEVELS = [0.75, 1, 1.25] as const;
 type Zoom = (typeof ZOOM_LEVELS)[number];
 
 const EMPTY_IDS: ReadonlySet<string> = new Set();
+const EMPTY_PRESELECT: string[] = [];
 
 // ---------------------------------------------------------------------------
 // Public component
@@ -50,7 +53,12 @@ const EMPTY_IDS: ReadonlySet<string> = new Set();
  * large (up to ~260 per showtime) and immutable per render, so keeping them
  * out of the reducer avoids needless work when the selection changes.
  */
-export function SeatMap({ showtime, seats, summary }: SeatMapProps) {
+export function SeatMap({
+  showtime,
+  seats,
+  summary,
+  preselectSeatIds,
+}: SeatMapProps) {
   const router = useRouter();
   const { showtimeId, selectedSeatIds, dispatch } = useSelection();
 
@@ -77,11 +85,74 @@ export function SeatMap({ showtime, seats, summary }: SeatMapProps) {
     return m;
   }, [seats]);
 
+  // Reducer-shaped views of the room, derived from the same index the render
+  // loop uses. `rowSeatsByRow` MUST cover every row: the preselect action
+  // silently drops a seat whose row is missing (it cannot run the orphan check
+  // without it), so a partial map would look like a business-rule rejection.
+  const { seatsById, rowSeatsByRow } = useMemo(() => {
+    const byId = new Map<string, SeatForSelection>();
+    const byRow = new Map<number, SeatForSelection[]>();
+    for (const [row, seatByCol] of seatByRowCol) {
+      const rowSeats: SeatForSelection[] = [];
+      for (const seat of seatByCol.values()) {
+        const forSelection = toSeatForSelection(seat);
+        byId.set(forSelection.seatId, forSelection);
+        rowSeats.push(forSelection);
+      }
+      byRow.set(row, rowSeats);
+    }
+    return { seatsById: byId, rowSeatsByRow: byRow };
+  }, [seatByRowCol]);
+
   // Only honor the selection when it belongs to *this* showtime. The reducer
   // clears + re-applies on mismatch, but the first render after mount can
   // briefly show stale ids belonging to a previously visited showtime.
   const activeIds: ReadonlySet<string> =
     showtimeId === showtime.id ? selectedSeatIds : EMPTY_IDS;
+
+  const preselectRequest = preselectSeatIds ?? EMPTY_PRESELECT;
+  const preselectKey = `${showtime.id}:${preselectRequest.join(",")}`;
+  const appliedPreselectKey = useRef<string | null>(null);
+
+  // The ref is what stops a re-dispatch on every unrelated re-render (zoom,
+  // dialog); the action's own idempotency is the second line of defence, not
+  // a substitute for it.
+  useEffect(() => {
+    if (preselectRequest.length === 0) return;
+    if (appliedPreselectKey.current === preselectKey) return;
+    appliedPreselectKey.current = preselectKey;
+
+    dispatch({
+      type: "preselect",
+      showtimeId: showtime.id,
+      seatIds: preselectRequest,
+      rowSeatsByRow,
+      seatsById,
+      blocks,
+    });
+  }, [
+    preselectKey,
+    preselectRequest,
+    showtime.id,
+    rowSeatsByRow,
+    seatsById,
+    blocks,
+    dispatch,
+  ]);
+
+  // Provenance marker: a seat is "pre-selected" only while it is BOTH still
+  // selected and part of the request, so deselecting one drops its annotation.
+  const preselectedIds: ReadonlySet<string> = useMemo(() => {
+    if (preselectRequest.length === 0) return EMPTY_IDS;
+    return new Set(preselectRequest.filter((seatId) => activeIds.has(seatId)));
+  }, [preselectRequest, activeIds]);
+
+  // Deduplicated, because the reducer dedupes too: counting `?preselect=1_5,1_5`
+  // as 2 requested would report a shortfall that never happened.
+  const requestedCount = useMemo(
+    () => new Set(preselectRequest).size,
+    [preselectRequest],
+  );
 
   const selectedSeats = useMemo(
     () => seats.filter((s) => activeIds.has(s.seatId)),
@@ -130,6 +201,13 @@ export function SeatMap({ showtime, seats, summary }: SeatMapProps) {
 
   return (
     <section aria-label="Selección de sillas" className="mt-8">
+      {preselectRequest.length > 0 && (
+        <PreselectBanner
+          appliedCount={preselectedIds.size}
+          requestedCount={requestedCount}
+        />
+      )}
+
       <Legend />
 
       <div className="mt-6 rounded-xl bg-surface-dark p-6 text-white">
@@ -157,16 +235,16 @@ export function SeatMap({ showtime, seats, summary }: SeatMapProps) {
               width: "fit-content",
             }}
           >
-            {Array.from({ length: layout.rows }, (_, i) => i + 1).map((row) => (
-              <SeatRow
-                key={row}
-                row={row}
-                rowLetter={ROW_LETTERS[row - 1] ?? String(row)}
-                blocks={blocks}
-                seatByCol={seatByRowCol.get(row)}
-                activeIds={activeIds}
-                onSeatClick={handleSeatClick}
-              />
+             {Array.from({ length: layout.rows }, (_, i) => i + 1).map((row) => (
+               <SeatRow
+                 key={row}
+                 rowLetter={ROW_LETTERS[row - 1] ?? String(row)}
+                 blocks={blocks}
+                 seatByCol={seatByRowCol.get(row)}
+                 activeIds={activeIds}
+                 preselectedIds={preselectedIds}
+                 onSeatClick={handleSeatClick}
+               />
             ))}
           </div>
         </div>
@@ -203,6 +281,62 @@ export function SeatMap({ showtime, seats, summary }: SeatMapProps) {
         </DialogContent>
       </Dialog>
     </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Preselect banner — copilot hand-off notice
+// ---------------------------------------------------------------------------
+
+/**
+ * Shown whenever the URL carried a `?preselect=`, including when no seat
+ * survived the rules — silence there reads as a dead link.
+ *
+ * The shortfall line LISTS possible causes instead of naming one: the reducer
+ * reports only `"max" | "orphan"`, yet seats are also dropped for being
+ * unknown, sold or wheelchair-reserved, so any specific reason would be a
+ * guess. Do not "improve" it into an assertion we cannot back.
+ *
+ * Both counts are derived live, so the copy is phrased as current state
+ * ("Tienes N…"), never as history — otherwise deselecting a seat by hand
+ * would leave the banner blaming a business rule for the user's own click.
+ */
+function PreselectBanner({
+  appliedCount,
+  requestedCount,
+}: {
+  appliedCount: number;
+  requestedCount: number;
+}) {
+  const missingCount = Math.max(requestedCount - appliedCount, 0);
+  const seatPhrase =
+    appliedCount === 1
+      ? "1 silla pre-seleccionada"
+      : `${appliedCount} sillas pre-seleccionadas`;
+  const reviewVerb = appliedCount === 1 ? "Revísala" : "Revísalas";
+  const missingPhrase =
+    missingCount === 1 ? "Quedó 1 silla" : `Quedaron ${missingCount} sillas`;
+
+  return (
+    <div
+      role="status"
+      data-testid="preselect-banner"
+      className="mb-4 flex items-start gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3"
+    >
+      <Sparkles className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
+      <div className="text-sm">
+        <p className="font-medium text-foreground">
+          {appliedCount > 0
+            ? `Tienes ${seatPhrase} por el copiloto. ${reviewVerb} y confirma — aún no se ha comprado nada.`
+            : "No tienes sillas pre-seleccionadas por el copiloto. Elige las tuyas en el mapa — aún no se ha comprado nada."}
+        </p>
+        {missingCount > 0 && (
+          <p className="mt-1 text-muted-foreground">
+            {`${missingPhrase} sin seleccionar: puede ser por disponibilidad, por la regla de sillas contiguas, por el máximo de 4 sillas por compra, por tratarse de sillas de accesibilidad reservadas, o por un cambio que hiciste en el mapa.`}
+          </p>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -300,18 +434,18 @@ function ZoomControls({
 // ---------------------------------------------------------------------------
 
 function SeatRow({
-  row,
   rowLetter,
   blocks,
   seatByCol,
   activeIds,
+  preselectedIds,
   onSeatClick,
 }: {
-  row: number;
   rowLetter: string;
   blocks: [number, number][];
   seatByCol: Map<number, Seat> | undefined;
   activeIds: ReadonlySet<string>;
+  preselectedIds: ReadonlySet<string>;
   onSeatClick: (seat: Seat) => void;
 }) {
   return (
@@ -349,6 +483,7 @@ function SeatRow({
                   seat={seat}
                   rowLetter={rowLetter}
                   selected={activeIds.has(seat.seatId)}
+                  preselected={preselectedIds.has(seat.seatId)}
                   onClick={onSeatClick}
                 />
               );
@@ -381,11 +516,13 @@ function SeatButton({
   seat,
   rowLetter,
   selected,
+  preselected,
   onClick,
 }: {
   seat: Seat;
   rowLetter: string;
   selected: boolean;
+  preselected: boolean;
   onClick: (seat: Seat) => void;
 }) {
   const isSold = seat.status === "Sold";
@@ -393,15 +530,17 @@ function SeatButton({
   const isPreferential = seat.areaCategory === "preferential";
 
   const label = `${rowLetter}${seat.col}`;
-  const statusText = selected
-    ? "seleccionada"
-    : isSold
-      ? "no disponible"
-      : isWheelchair
-        ? "silla de ruedas"
-        : isPreferential
-          ? "preferencial"
-          : "disponible";
+  const statusText = preselected
+    ? "seleccionada por el copiloto"
+    : selected
+      ? "seleccionada"
+      : isSold
+        ? "no disponible"
+        : isWheelchair
+          ? "silla de ruedas"
+          : isPreferential
+            ? "preferencial"
+            : "disponible";
 
   return (
     <button
@@ -409,6 +548,7 @@ function SeatButton({
       data-seat-id={seat.seatId}
       data-status={seat.status}
       data-area={seat.areaCategory}
+      data-preselected={preselected ? "true" : undefined}
       aria-label={`Silla ${label} — ${statusText} — ${formatCOP(seat.price)}`}
       aria-pressed={selected}
       disabled={isSold}
@@ -421,6 +561,11 @@ function SeatButton({
           !selected &&
           "hover:brightness-110 focus-visible:brightness-110 cursor-pointer",
         isSold && "cursor-not-allowed opacity-70",
+        // Provenance ring. `outline-*` and not `ring-*`: the base ring is
+        // `ring-inset`, which tailwind-merge keeps, so an added ring would be
+        // drawn inside the 24px seat instead of around it.
+        preselected &&
+          "outline-solid outline-2 outline-offset-1 outline-primary",
       )}
     >
       {isWheelchair ? (

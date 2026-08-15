@@ -1,0 +1,21 @@
+: SYNTHETIC FIXTURE — NOT a captured agent run.
+: Derived from agent/docs/sse-contract.md §Error codes (the `timeout` row:
+: "tool call exceeded timeout" -> "La consulta tardó demasiado...") and §error,
+: which states "Emitted when an error occurs. The stream closes after this
+: event." The message is verbatim from agent/src/cinepais_agent/sse.py:96-97.
+: None of the real captures in this directory contains an `error` frame
+: (verified: grep -c '^event: error' returns 0 on all of them), and every real
+: capture ends with `done`, so a stream that terminates on `error` with NO
+: trailing `done` had to be authored.
+event: tool_call
+data: {"type":"tool_call","tool":"recommend_best","input":{"film_query":"La Odisea","city":"Bogotá","n":4}}
+
+event: token
+data: {"type":"token","content":"Estoy revisando las funciones de **La Odisea** en Bogotá"}
+
+event: token
+data: {"type":"token","content":" para encontrarte 4 sillas juntas"}
+
+event: error
+data: {"type":"error","code":"timeout","message":"La consulta tardó demasiado. Intenta de nuevo."}
+

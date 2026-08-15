@@ -205,6 +205,55 @@ curl http://localhost:3000/api/showtimes/st-site-bog-3-imax-4-2245/seats
 - **Cutoff rule** (`src/lib/business/cutoff.ts`): showtimes starting within 15 minutes of `now` are excluded from `/api/showtimes`.
 - **Quality rule** (`src/lib/business/quality.ts`): rows 1–3 = `low`, rows 4–8 = `optimal`, rows 9+ = `high` (proportional for smaller rooms).
 
+## Copiloto (Fase D)
+
+A floating chat bubble that lets moviegoers ask natural-language questions ("¿dónde veo X en IMAX este finde con 2 sillas juntas?") and get back a recommendation card — with a human-in-the-loop (HITL) CTA that pre-selects the recommended seats on the seat map, so the person still reviews and confirms before buying.
+
+The widget talks **directly to the agent** (`agent/` on `:8000`), with no Next.js proxy in between. One line why: a proxy would collapse the agent's per-IP rate limit into a single global limit (every request would appear to come from the web server's IP) and would hit Vercel's ~25s streaming response cap against tool turns that can take up to 45s (see `agent/docs/sse-contract.md` §latency expectations).
+
+### Environment
+
+| Variable | Default | Effect |
+|---|---|---|
+| `NEXT_PUBLIC_AGENT_URL` | `http://localhost:8000` | Base URL the widget calls directly for `POST /chat` (SSE) |
+
+In Fase E (deploy), `NEXT_PUBLIC_AGENT_URL` gets repointed at the Fly.io host, and — on the agent side — `CORS_ORIGIN` (see `agent/README.md` §Environment variables) must be repointed at the Vercel domain. Both sides need updating together or CORS will reject the widget's requests.
+
+### Run both halves locally
+
+```bash
+# Terminal 1 — web on :3000
+pnpm dev
+
+# Terminal 2 — agent on :8000
+cd agent && uv run uvicorn cinepais_agent.main:app --port 8000
+```
+
+Seed with tomorrow's date as `SEED_NOW` — the agent's tool calls need showtimes that are strictly future, not today (today's date can fall inside the 15-minute cutoff window and disappear from results). Never hardcode a date literal; recompute it:
+
+```bash
+SEED_NOW=$(python3 -c "from datetime import date, timedelta; print((date.today()+timedelta(days=1)).strftime('%Y-%m-%d'))")
+TZ=America/Bogota SEED=20260801 SEED_NOW=$SEED_NOW pnpm prisma db seed
+```
+
+### `?preselect=` URL contract
+
+The recommendation card's CTA (`Ver y confirmar sillas`) navigates to `/showtimes/[id]?preselect=<comma-separated-seatIds>`, which pre-selects those seats on load. Worked example (depends on the current seed — this pair is layout-stable across re-seeds because it's the first IMAX showtime and IMAX row 1 cols 10–11 are always in block `[1,5]`):
+
+```
+http://localhost:3000/showtimes/st-site-med-3-imax-0-1930?preselect=1_1_10,1_1_11
+```
+
+This loads the seat map with seats `1_1_10` and `1_1_11` already selected and a banner reading:
+
+> Tienes N sillas pre-seleccionadas por el copiloto. Revísalas y confirma — aún no se ha comprado nada.
+
+Pre-selection runs through the same business rules as manual selection, so a seat can be silently dropped from the recommendation if it's already sold, would create an orphan seat, would push the selection past the max of 4, or is a wheelchair/accessibility seat — the banner tells the person this happened, in Spanish, so they always know why fewer seats than requested ended up marked.
+
+### Known contract gap (advisory for Fase E)
+
+`agent/docs/sse-contract.md`'s `recommendation` event schema shows `"priceFrom": 32000` without noting that the field is nullable. In the actual event model (`agent/src/cinepais_agent/events.py:47`) `priceFrom` is typed `int | None` — unlike sibling fields such as `showtimeId` and `filmId`, which the same doc does mark `string | null`. A client built strictly off the documented example could crash or render "$undefined" on a `no_availability` outcome where `priceFrom` comes back `null`. The web widget itself guards against this, but the contract doc under-specifies it — flagged here for Fase E to fix in `agent/docs/sse-contract.md` (out of scope for this phase; that file was intentionally left untouched).
+
 ## Determinism
 
 The seed uses `SEED` (PRNG seed) and `SEED_NOW` (reference time) env vars. Same values → same DB state on any machine.
@@ -224,7 +273,7 @@ Next.js 16 + React 19 + Tailwind 4 + shadcn 2.3 new-york + Prisma 7.9 + @prisma/
 | `/` | Home — hero carousel + film grid (Cartelera / Pronto / Preventa tabs) |
 | `/films` | Catalog — dark-charcoal grid, format filter |
 | `/films/[id]` | Film detail — backdrop hero, ficha, 7-day date selector, showtime accordion |
-| `/showtimes/[id]` | Seat map — interactive grid, max-4 rule, orphan rule, wheelchair dialog |
+| `/showtimes/[id]` | Seat map — interactive grid, max-4 rule, orphan rule, wheelchair dialog, accepts `?preselect=` (see §Copiloto) |
 | `/checkout` | Order summary — seat list with COP prices, confirm button |
 | `/checkout/confirmation` | Confirmation — deterministic order number (CP-XXXXXX), demo notice |
 

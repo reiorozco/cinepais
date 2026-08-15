@@ -1,0 +1,36 @@
+event: tool_call
+data: {"type":"tool_call","tool":"recommend_best","input":{"date_range":"finde","film_query":"Sombras del Puente"}}
+
+event: recommendation
+data: {"type":"recommendation","outcome":"recommended","showtimeId":"st-site-bog-2-2d-2-1-1400","filmId":"film-02","seatIds":["1_4_1"],"requestedN":1,"siteName":"CinePaís Salitre","city":"Bogotá","businessDate":"2026-08-15","time":"14:00","formats":["2D"],"priceFrom":18000,"qualityTier":"optimal","reasoning":"Encontré 1 sillas juntas en fila 4 (zona óptima) en CinePaís Salitre a las 14:00.","alternatives":[{"showtimeId":"st-site-bog-3-premium-1-1400","filmId":"film-02","siteName":"CinePaís Titán Plaza","businessDate":"2026-08-15","time":"14:00","formats":["Premium"],"priceFrom":24000,"qualityTier":"optimal","reason":"mejor calidad de silla"},{"showtimeId":"st-site-bog-1-imax-1-2100","filmId":"film-02","siteName":"CinePaís Zona T","businessDate":"2026-08-15","time":"21:00","formats":["IMAX"],"priceFrom":32000,"qualityTier":"optimal","reason":"mejor calidad de silla"},{"showtimeId":"st-site-bog-3-premium-1-2245","filmId":"film-02","siteName":"CinePaís Titán Plaza","businessDate":"2026-08-15","time":"22:45","formats":["Premium"],"priceFrom":24000,"qualityTier":"optimal","reason":"mejor calidad de silla"}]}
+
+event: token
+data: {"type":"token","content":"La mejor opción este fin de semana para **Sombras del Puente** es:"}
+
+event: token
+data: {"type":"token","content":"\n\n* **Cine:** CinePaís Salitre (Bogotá)\n* **Fecha y hora:** Sábado 1"}
+
+event: token
+data: {"type":"token","content":"5 de agosto a las 14:00 (Formato 2D)\n* **Precio desde:** $18."}
+
+event: token
+data: {"type":"token","content":"000\n* **Ubicación de sillas:** Fila 4 (Zona óptima)\n\n### Otras"}
+
+event: token
+data: {"type":"token","content":" alternativas destacadas:\n* **CinePaís Titán Plaza:** 14:00 hrs (Formato Premium) por"}
+
+event: token
+data: {"type":"token","content":" **$24.000** (mayor comodidad y excelente ubicación).\n* **CinePaís Zona T:** "}
+
+event: token
+data: {"type":"token","content":"21:00 hrs (Formato IMAX) por **$32.000** (experiencia"}
+
+event: token
+data: {"type":"token","content":" en pantalla gigante).\n* **CinePaís Titán Plaza:** 22:45 hrs (Formato"}
+
+event: token
+data: {"type":"token","content":" Premium) por **$24.000**."}
+
+event: done
+data: {"type":"done","sessionQueriesUsed":1,"sessionQueryCap":20}
+

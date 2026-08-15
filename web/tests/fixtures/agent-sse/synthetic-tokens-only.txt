@@ -1,0 +1,23 @@
+: SYNTHETIC FIXTURE — NOT a captured agent run.
+: Derived from agent/docs/sse-contract.md §Event ordering -> "Non-tool turns
+: (conversational responses)", which documents the shape `event: token` ... 
+: `event: done` with no tool_call and no recommendation, and states "Both
+: patterns are valid. Fase D must handle BOTH."
+: Every fixture in this directory (3 real captures + the tool-only synthetic)
+: carries at least one `tool_call` (verified by grep -c '^event: tool_call'),
+: so the pure conversational shape had to be authored.
+event: token
+data: {"type":"token","content":"¡Hola! Soy el copiloto de **CinePaís**."}
+
+event: token
+data: {"type":"token","content":"\n\nPuedo ayudarte a encontrar funciones, comparar formatos (2D, Premium, IMAX)"}
+
+event: token
+data: {"type":"token","content":" y buscar sillas juntas con buena ubicación en Bogotá y Medellín."}
+
+event: token
+data: {"type":"token","content":"\n\n¿Qué película te gustaría ver y en qué ciudad?"}
+
+event: done
+data: {"type":"done","sessionQueriesUsed":4,"sessionQueryCap":20}
+
