@@ -425,7 +425,7 @@ Count them in `.omo/evidence/llm-spend-cinepais-phase-4-deploy.txt`, appending o
   - **QA (per-commit proof, stronger):** `for c in $(git rev-list main); do echo "$c $(git ls-tree -r --name-only $c | grep -c '^\.omo/evidence/')"; done` → every line ends in `0`.
   - **Evidence:** `task-18-…txt`.
 
-- [~] 19. `[MANUAL — USER]` + `gh`: create the GitHub repo and push `main`
+- [x] 19. `[MANUAL — USER]` + `gh`: create the GitHub repo and push `main`
   - **Verified inputs:** GitHub login `reiorozco`; token scopes include `repo`; **no `cinepais` repo exists** (checked, with a positive `matchday` control); default branch `main`; the user's precedent remote style is **SSH** (`git@github.com:reiorozco/matchday-agent.git`).
   - **`[MANUAL — USER]`:** the user confirms the repo name and that it should be **public**, then the executor creates it. Do not create it unilaterally without that confirmation in the session.
   - **Do:** create `reiorozco/cinepais` as **public** with a one-line description in the precedent style (stack + "Live at …" once URLs exist; a placeholder is acceptable now and updated in Wave 6). Add the SSH remote, push `main`, set it as the default branch. **Do not push the four phase branches.**
@@ -450,7 +450,7 @@ Count them in `.omo/evidence/llm-spend-cinepais-phase-4-deploy.txt`, appending o
   - **Note on the one known historical match:** `.omo/evidence/f4-wave-cinepais-phase-3-integration.md` contains an `AIza…`-shaped string that is a **synthetic self-test** of the scanner (the line is an `echo … | grep -E …` control), not a real credential. Todo 18's curation removes that file from every published commit, so the scan should come back clean. If it does not, curation failed — go back to Todo 18 rather than waving it through.
   - **Evidence:** `task-19-…txt` with both security checks run **before** the push.
 
-- [ ] 20. **Wave 3 close — HARD GATE. Do not start Todo 21 in this session.**
+- [x] 20. **Wave 3 close — HARD GATE. Do not start Todo 21 in this session.**
   - **Accept:** `main` exists and is pushed · the security greps are recorded as passing · the four phase branches still exist locally and are **not** on the remote · `git status --porcelain` empty.
   - **STOP CONDITION:** complete only when `.omo/evidence/wave-3-closed-cinepais-phase-4-deploy.txt` exists with those results. **End the session.**
 
@@ -458,7 +458,7 @@ Count them in `.omo/evidence/llm-spend-cinepais-phase-4-deploy.txt`, appending o
 
 ### Wave 4 — Deploy the web to Vercel
 
-- [ ] 21. Reserve BOTH hostnames and set BOTH env vars **before** either deploy
+- [x] 21. Reserve BOTH hostnames and set BOTH env vars **before** either deploy
   - **Why (the phase's #1 trap):** `NEXT_PUBLIC_AGENT_URL` is a `NEXT_PUBLIC_*` var, so it is **inlined at build time** — changing it later on Vercel requires a full rebuild, not an env edit. Both hostnames are choosable in advance, so wiring them up front removes the trap entirely.
   - **Do:** fix the agent app name as `cinepais-agent` ⇒ `https://cinepais-agent.fly.dev`. **If the Fly app name is taken**, pick `cinepais-copilot`, record the substitution, and use it consistently everywhere thereafter. Set `NEXT_PUBLIC_AGENT_URL=https://cinepais-agent.fly.dev` on Vercel for the **production** environment.
   - **⚠️ The Vercel domain is a PREDICTION at this point, not a confirmed fact.** Measured on this project: `domains: []`, `latestDeployment: null`, `live: false` — no domain exists until Todo 24 deploys. Record `https://cinepais.vercel.app` as the **predicted** production URL, explicitly labelled as unconfirmed, and note that Todo 24 re-verifies it before Todo 29 bakes it into a Fly secret. Do **not** describe it as confirmed anywhere in the evidence.
@@ -466,21 +466,21 @@ Count them in `.omo/evidence/llm-spend-cinepais-phase-4-deploy.txt`, appending o
   - **QA:** (failure) confirm the value contains no trailing slash and uses `https://` — a trailing slash produces a double-slash request path.
   - **Evidence:** `task-21-…txt` with the hostname table.
 
-- [ ] 22. Vercel: disable SSO deployment protection (BLOCKER B3)
+- [x] 22. Vercel: disable SSO deployment protection (BLOCKER B3)
   - **Why:** measured on this project — `ssoProtection.enabled = true`, `deploymentType: all_except_custom_domains`. Every `*.vercel.app` URL would show a Vercel login wall, making the portfolio link useless.
   - **Do:** disable Vercel Authentication for the project. Leave password protection and trusted IPs off.
   - **Accept:** re-reading the project's deployment-protection settings shows `ssoProtection.enabled = false`.
   - **QA (the real proof):** after Todo 24 deploys, `curl -s -o /dev/null -w '%{http_code}' <WEB_URL>` from a shell with **no Vercel session** returns `200`, not `401`. Record the status code.
   - **Evidence:** `task-22-…txt`.
 
-- [ ] 23. Neon: apply migrations and seed the production database
+- [x] 23. Neon: apply migrations and seed the production database
   - **Do:** confirm which Neon database the Vercel project's `DATABASE_URL` points at, and whether it is the same one dev uses (`web/.env.local`). Record the answer explicitly — the user must know if dev and prod share data. Then run `pnpm prisma migrate deploy` against it, followed by the §Seed rule seed with a **recomputed** `SEED_NOW`. Also record the Neon **region**, which Wave 5 uses to justify the Fly region.
   - **Accept:** `migrate deploy` exits 0 · the seed prints `Seed complete: 119280 seats across 672 showtimes` · the evidence names the Neon region and states plainly whether prod and dev share a database.
   - **QA (runnable now, without any deployment):** (happy) confirm rows exist in the production database. **Write this as a small script file, not `tsx -e`** — the `@/` path alias does not resolve under `-e`, and `schema.prisma`'s `datasource db` block has **no `url`**, so a bare `new PrismaClient()` will not connect. Mirror `web/src/lib/db/client.ts`, which constructs `new PrismaClient({ adapter: new PrismaPg({ connectionString }) })`, using **relative** imports. The script prints the `showtime` and `seat` counts and exits non-zero if either is 0. (failure) a count of `0` means the seed did not land — re-seed with a recomputed `SEED_NOW`, never a literal date. Delete the temporary script afterwards and note that in the evidence.
   - **Note:** the HTTP-level freshness check (`<WEB_URL>/api/showtimes?filmId=film-01` non-empty) is **owned by Todo 24's Accept list**, because no deployment exists yet at this point. It is not deferred prose here — it is a named criterion there.
   - **Evidence:** `task-23-…txt`.
 
-- [ ] 24. Deploy the web to production and verify the site works end to end (without the copilot)
+- [x] 24. Deploy the web to production and verify the site works end to end (without the copilot)
   - **Do:** trigger a production deployment from `main`. Confirm the build ran `prisma generate` via the `prebuild` script.
   - **Accept:** the deployment status is READY · the build log contains a `prisma generate` invocation (positive control: it also contains `next build`) · `curl -s -o /dev/null -w '%{http_code}' <WEB_URL>` → `200`.
   - **Accept — resolve Todo 21's PREDICTED domain into a fact (do this before Wave 5 uses it):** re-read the project's `domains` field now that a deployment exists, and record the **actual** production URL. If it differs from Todo 21's prediction, update `NEXT_PUBLIC_AGENT_URL` on Vercel **and redeploy** (it is build-time inlined), and carry the corrected value forward as Wave 5's `CORS_ORIGIN`. Record `PREDICTED=<x>` and `ACTUAL=<y>` side by side, even when they match.
@@ -488,7 +488,7 @@ Count them in `.omo/evidence/llm-spend-cinepais-phase-4-deploy.txt`, appending o
   - **QA (drive the real Fase B flow on the deployed site, browser-based):** home → a film → pick date/format → open a showtime → select 2 adjacent seats → checkout → confirm. Capture a screenshot at the seat map and at the confirmation. Also confirm posters render (the `placehold.co` `remotePatterns` entry in `web/next.config.ts` covers them). Failure path: open a nonexistent showtime id and confirm a 404, not a crash. **The copilot is expected to be non-functional at this point** — the agent is not deployed yet; record that as expected, not as a defect. If Path A was taken, also record whether the Todo 14 cron is registered.
   - **Evidence:** `task-24-…png` ×2 + `task-24-…txt`.
 
-- [ ] 25. **Wave 4 close — HARD GATE. Do not start Todo 26 in this session.**
+- [x] 25. **Wave 4 close — HARD GATE. Do not start Todo 26 in this session.**
   - **Commit:** `chore(web): production deployment configuration` (only if files changed; if nothing changed, record that and skip the commit rather than creating an empty one)
   - **Accept:** `<WEB_URL>` returns 200 without a Vercel session · the purchase flow screenshots exist · the Neon region and the shared-vs-separate DB answer are recorded.
   - **STOP CONDITION:** complete only when `.omo/evidence/wave-4-closed-cinepais-phase-4-deploy.txt` exists. **End the session.**
