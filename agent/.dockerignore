@@ -1,0 +1,56 @@
+# Build context exclusions for `docker build` (context = agent/).
+# Anything not needed to install dependencies or run uvicorn stays out.
+
+# Version control
+.git/
+.gitignore
+
+# Python caches + the local virtualenv.
+# .venv/ MUST be excluded: the image builds its own at /app/.venv (owned by
+# appuser). Copying the host's darwin/arm64 venv over it would shadow the
+# Linux one and break every entry point.
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Secrets — NEVER copy .env into the image. Verified by Todo 27's QA check 2.
+# .env.example carries names and defaults only, no values, so it stays.
+.env
+.env.*
+!.env.example
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# Local agent tooling (dev-only). Lives at the repo root, not in agent/, so
+# these are belt-and-braces in case the build context is ever widened.
+.claude/
+.agents/
+.omo/
+.mcp.json
+
+# Not needed at runtime. `uv sync --no-dev` never installs pytest, so the
+# suite could not run inside the image anyway; docs/ is reference prose.
+tests/
+docs/
+
+# Deploy artifacts — the build reads them from outside the context, and
+# copying them in would only bloat the image. fly.toml arrives in Todo 28.
+Dockerfile
+.dockerignore
+fly.toml
+
+# NOT ignored, and deliberately so:
+#   README.md      — pyproject.toml:5 declares `readme = "README.md"`; the
+#                    uv_build backend reads it when building the local package
+#                    in sync step 2. Excluding it fails the build.
+#   .python-version — pins 3.12, matching the base image.
+#   pyproject.toml / uv.lock / src/ — the app itself.
