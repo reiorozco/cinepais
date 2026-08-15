@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Next.js
+.next/
+.turbo/
+
+# Environment variables (pulled via vercel env pull - never hand-fill)
+.env
+.env.local
+.env*.local
+
+# Vercel
+.vercel/
+
+# Prisma
+web/prisma/*.db
+web/prisma/*.db-journal
+web/src/generated/
+
+# Build artifacts
+coverage/
+
+# Atlas / orchestrator state
+.omo/evidence/
+
+# OS
+.DS_Store
+*.log

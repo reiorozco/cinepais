@@ -1,0 +1,107 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Format {
+  IMAX
+  Onyx
+  TwoD        @map("2D")
+  Doblada
+  Subtitulada
+  Premium
+}
+
+enum SeatStatus {
+  Available
+  Sold
+}
+
+enum AreaCategory {
+  general
+  premium
+  wheelchair
+  preferential
+}
+
+enum QualityTier {
+  low
+  optimal
+  high
+}
+
+model Site {
+  id        String       @id
+  name      String
+  city      String
+  lat       Float
+  lng       Float
+  formats   SiteFormat[]
+  showtimes Showtime[]
+
+  @@index([city])
+}
+
+model SiteFormat {
+  siteId String
+  format Format
+  site   Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@id([siteId, format])
+}
+
+model Film {
+  id          String     @id
+  title       String
+  posterUrl   String
+  synopsis    String
+  durationMin Int
+  rating      String
+  director    String
+  cast        Json
+  genres      Json
+  showtimes   Showtime[]
+}
+
+model Showtime {
+  id           String           @id
+  filmId       String
+  siteId       String
+  businessDate DateTime         @db.Date
+  time         String
+  room         String
+  formats      ShowtimeFormat[]
+  seats        Seat[]
+  film         Film             @relation(fields: [filmId], references: [id], onDelete: Cascade)
+  site         Site             @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@index([filmId, businessDate])
+  @@index([siteId, businessDate])
+}
+
+model ShowtimeFormat {
+  showtimeId String
+  format     Format
+  showtime   Showtime @relation(fields: [showtimeId], references: [id], onDelete: Cascade)
+
+  @@id([showtimeId, format])
+}
+
+model Seat {
+  showtimeId   String
+  seatId       String
+  row          Int
+  col          Int
+  area         Int
+  status       SeatStatus
+  areaCategory AreaCategory
+  qualityTier  QualityTier
+  showtime     Showtime     @relation(fields: [showtimeId], references: [id], onDelete: Cascade)
+
+  @@id([showtimeId, seatId])
+  @@index([showtimeId, status])
+}
