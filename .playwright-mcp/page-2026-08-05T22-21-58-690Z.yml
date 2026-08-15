@@ -1,0 +1,23 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - img "CinePaís" [ref=e5]
+    - generic [ref=e18]:
+      - generic [ref=e19]:
+        - heading "CinePaís — tokens de marca" [level=1] [ref=e20]
+        - paragraph [ref=e21]: Vista previa de los tokens introducidos en la fase 1. La UI real llega en las próximas tareas.
+      - generic [ref=e22]:
+        - paragraph [ref=e23]: Wordmark sobre fondo claro
+        - img "CinePaís" [ref=e24]
+      - generic [ref=e37]:
+        - paragraph [ref=e38]: Wordmark sobre --surface-dark
+        - img "CinePaís" [ref=e39]
+      - generic [ref=e52]:
+        - paragraph [ref=e53]: Paleta de sillas (leyenda)
+        - generic [ref=e54]:
+          - generic [ref=e55]: Disponible
+          - generic [ref=e58]: Seleccionada
+          - generic [ref=e61]: Vendida
+          - generic [ref=e64]: Preferencial
+      - button "Comprar boletas" [ref=e68]
+  - region "Notifications alt+T"
+  - alert [ref=e69]

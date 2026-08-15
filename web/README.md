@@ -140,7 +140,8 @@ curl "http://localhost:3000/api/showtimes?filmId=film-01"
     "businessDate": "2026-08-04",
     "time": "22:45",
     "room": "imax",
-    "formats": ["IMAX"]
+    "formats": ["IMAX"],
+    "priceFrom": 32000
   }
 ]
 ```
@@ -164,7 +165,8 @@ curl http://localhost:3000/api/showtimes/st-site-bog-3-imax-4-2245/seats
     "businessDate": "2026-08-04",
     "time": "22:45",
     "room": "imax",
-    "formats": ["IMAX"]
+    "formats": ["IMAX"],
+    "priceFrom": 32000
   },
   "seats": [
     {
@@ -174,7 +176,8 @@ curl http://localhost:3000/api/showtimes/st-site-bog-3-imax-4-2245/seats
       "area": 1,
       "status": "Available",
       "areaCategory": "general",
-      "qualityTier": "low"
+      "qualityTier": "low",
+      "price": 32000
     }
   ],
   "summary": {
@@ -185,6 +188,12 @@ curl http://localhost:3000/api/showtimes/st-site-bog-3-imax-4-2245/seats
       "premium": {"total": 100, "available": 100},
       "wheelchair": {"total": 2, "available": 2},
       "preferential": {"total": 2, "available": 2}
+    },
+    "priceTable": {
+      "general": 32000,
+      "preferential": 37000,
+      "premium": 43000,
+      "wheelchair": 32000
     }
   }
 }
@@ -207,3 +216,28 @@ SEED=20260801 SEED_NOW=2026-08-01T00:00:00-05:00 pnpm prisma db seed
 ## Stack
 
 Next.js 16 + React 19 + Tailwind 4 + shadcn 2.3 new-york + Prisma 7.9 + @prisma/adapter-pg + Vitest 2
+
+## UI pages
+
+| Route | Description |
+|---|---|
+| `/` | Home — hero carousel + film grid (Cartelera / Pronto / Preventa tabs) |
+| `/films` | Catalog — dark-charcoal grid, format filter |
+| `/films/[id]` | Film detail — backdrop hero, ficha, 7-day date selector, showtime accordion |
+| `/showtimes/[id]` | Seat map — interactive grid, max-4 rule, orphan rule, wheelchair dialog |
+| `/checkout` | Order summary — seat list with COP prices, confirm button |
+| `/checkout/confirmation` | Confirmation — deterministic order number (CP-XXXXXX), demo notice |
+
+### Run the full purchase flow
+
+1. `SEED=20260801 SEED_NOW=2026-08-06 pnpm prisma db seed` (re-seed with today's date as SEED_NOW)
+2. `pnpm dev` (or `pnpm build && pnpm start` for stable QA)
+3. Open http://localhost:3000
+4. Click a film → pick a date + format → open a showtime → select seats → checkout → confirm
+
+### Pricing fields (API additions in Fase 1)
+
+- `GET /api/showtimes` items now include `priceFrom: number` (COP, cheapest general seat)
+- `GET /api/showtimes/:id/seats` items now include `price: number` (COP, per seat)
+- `GET /api/showtimes/:id/seats` summary now includes `priceTable: { general, preferential, premium, wheelchair }` (COP)
+- Pricing matrix: IMAX $32.000 / Premium $24.000 / 2D $18.000 × zone multiplier × Wednesday ×0.6, rounded to $500

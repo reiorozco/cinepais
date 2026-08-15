@@ -25,6 +25,15 @@ coverage/
 # Atlas / orchestrator state
 .omo/evidence/
 
+# Playwright MCP snapshots
+.playwright-mcp/
+
+# Temporary screenshots
+initial-load.png
+
+# Orchestrator run-continuation state
+.omo/run-continuation/
+
 # OS
 .DS_Store
 *.log

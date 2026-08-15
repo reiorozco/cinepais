@@ -46,26 +46,32 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  --color-brand-header: var(--brand-header);
+  --color-surface-dark: var(--surface-dark);
+  --color-seat-available: var(--seat-available);
+  --color-seat-selected: var(--seat-selected);
+  --color-seat-sold: var(--seat-sold);
+  --color-seat-preferential: var(--seat-preferential);
 }
 
 :root {
   --radius: 0.625rem;
-  --primary: oklch(0.205 0 0);
+  --primary: oklch(0.52 0.17 258);
   --primary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.97 0 0);
   --muted-foreground: oklch(0.556 0 0);
   --border: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --ring: oklch(0.52 0.17 258);
   --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --foreground: oklch(0.16 0.01 260);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.16 0.01 260);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
+  --popover-foreground: oklch(0.16 0.01 260);
   --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
+  --secondary-foreground: oklch(0.16 0.01 260);
   --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --accent-foreground: oklch(0.16 0.01 260);
   --destructive: oklch(0.577 0.245 27.325);
   --input: oklch(0.922 0 0);
   --chart-1: oklch(0.87 0 0);
@@ -74,13 +80,22 @@
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
   --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.16 0.01 260);
+  --sidebar-primary: oklch(0.52 0.17 258);
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-accent-foreground: oklch(0.16 0.01 260);
   --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar-ring: oklch(0.52 0.17 258);
+
+  /* CinePaís brand tokens */
+  --brand-header: oklch(0.13 0.01 260);
+  /* rgb() (not oklch) so getComputedStyle serialises as rgb, not lab — sRGB equivalent of oklch(0.19 0.01 260) */
+  --surface-dark: rgb(17 20 24);
+  --seat-available: oklch(0.52 0.17 258);
+  --seat-selected: oklch(0.72 0.2 145);
+  --seat-sold: oklch(0.85 0 0);
+  --seat-preferential: oklch(0.2 0 0);
 }
 
 .dark {

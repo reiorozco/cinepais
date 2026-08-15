@@ -747,13 +747,13 @@ Your next move: cerrar este chat, abrir uno nuevo, y ejecutar `/start-work` — 
 ## Final verification wave
 > Runs in parallel after ALL todos. ALL must APPROVE. Surface results and wait for the user's explicit okay before declaring complete.
 
-- [ ] F1. Plan compliance audit
+- [x] F1. Plan compliance audit
   Delegate to `oracle`: read this plan file + every acceptance criteria evidence file under `.omo/evidence/task-*-cinepais-phase-0-scaffold.*`. For each of Todos 1–13, verify the acceptance criteria are demonstrably met by the recorded evidence. For each Scope §Must-NOT-have item, verify the codebase does NOT violate it (grep for `CineColombia`, `sqlite`, `middleware.ts`, `hsl(var(`, `tailwind.config`, `prisma-client-js`, `Math.random`). Output: `APPROVE` or `REJECT: <numbered list of violations>`.
 
-- [ ] F2. Code quality review
+- [x] F2. Code quality review
   Delegate to `oracle`: read every file under `web/src/**/*.ts` + `web/prisma/*.ts` + `web/tests/*.ts` created by this plan. Check: TypeScript strict compliance (no `any`, no `!.` unless justified), no dead code, no leaked secrets, no unhandled promises, imports use `@/` alias not relative deep paths, error responses always typed, business rules are pure functions, no console.log in production code paths. Output: `APPROVE` or `REJECT: <file:line — issue>`.
 
-- [ ] F3. Real manual QA
+- [x] F3. Real manual QA
   Delegate to `unspecified-high`: run this exact sequence and record the output at `.omo/evidence/f3-cinepais-phase-0-scaffold.txt`:
     1. `cd web && pnpm install && pnpm prisma migrate deploy && pnpm prisma db seed` — reset environment.
     2. `pnpm dev &` — start dev server, wait 12s.
@@ -765,7 +765,7 @@ Your next move: cerrar este chat, abrir uno nuevo, y ejecutar `/start-work` — 
     8. Kill dev server.
   Output: `APPROVE` if all assertions pass, else `REJECT: <step-N failure>`.
 
-- [ ] F4. Scope fidelity
+- [x] F4. Scope fidelity
   Delegate to `oracle`: compare this plan's outputs against `specs/002-implementation-plan.md` §"Sesión A — Fase 0" deliverables (repo running, schema, seed, endpoints, README). Confirm every listed deliverable is present, and confirm NO Fase B/C/D/E deliverable snuck in (no home page components, no agent, no deploy config). Output: `APPROVE` or `REJECT: <spec item — missing/extra>`.
 
 ## Commit strategy

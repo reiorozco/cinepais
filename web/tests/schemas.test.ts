@@ -53,6 +53,7 @@ describe("Zod schemas parse README examples", () => {
       time: "22:45",
       room: "imax",
       formats: ["IMAX"],
+      priceFrom: 32000,
     };
     expect(() => ShowtimeSchema.parse(example)).not.toThrow();
   });
@@ -66,6 +67,7 @@ describe("Zod schemas parse README examples", () => {
       status: "Available",
       areaCategory: "general",
       qualityTier: "low",
+      price: 32000,
     };
     expect(() => SeatSchema.parse(example)).not.toThrow();
   });
@@ -79,6 +81,12 @@ describe("Zod schemas parse README examples", () => {
         premium: { total: 100, available: 100 },
         wheelchair: { total: 2, available: 2 },
         preferential: { total: 2, available: 2 },
+      },
+      priceTable: {
+        general: 32000,
+        preferential: 37000,
+        premium: 43000,
+        wheelchair: 32000,
       },
     };
     expect(() => SeatSummarySchema.parse(example)).not.toThrow();
@@ -96,6 +104,7 @@ describe("Zod schemas parse README examples", () => {
         time: "22:45",
         room: "imax",
         formats: ["IMAX"],
+        priceFrom: 32000,
       },
       seats: [
         {
@@ -106,6 +115,7 @@ describe("Zod schemas parse README examples", () => {
           status: "Available",
           areaCategory: "general",
           qualityTier: "low",
+          price: 32000,
         },
       ],
       summary: {
@@ -116,6 +126,12 @@ describe("Zod schemas parse README examples", () => {
           premium: { total: 100, available: 100 },
           wheelchair: { total: 2, available: 2 },
           preferential: { total: 2, available: 2 },
+        },
+        priceTable: {
+          general: 32000,
+          preferential: 37000,
+          premium: 43000,
+          wheelchair: 32000,
         },
       },
     };

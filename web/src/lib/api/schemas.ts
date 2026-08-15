@@ -39,6 +39,7 @@ export const ShowtimeSchema = z.object({
   time: z.string().regex(/^\d{2}:\d{2}$/),
   room: z.string(),
   formats: z.array(FormatSchema),
+  priceFrom: z.number().int(),
 });
 
 export const AreaCategorySchema = z.enum([
@@ -60,6 +61,7 @@ export const SeatSchema = z.object({
   status: SeatStatusSchema,
   areaCategory: AreaCategorySchema,
   qualityTier: QualityTierSchema,
+  price: z.number().int(),
 });
 
 export const AreaCountSchema = z.object({
@@ -75,6 +77,12 @@ export const SeatSummarySchema = z.object({
     premium: AreaCountSchema,
     wheelchair: AreaCountSchema,
     preferential: AreaCountSchema,
+  }),
+  priceTable: z.object({
+    general: z.number().int(),
+    preferential: z.number().int(),
+    premium: z.number().int(),
+    wheelchair: z.number().int(),
   }),
 });
 
