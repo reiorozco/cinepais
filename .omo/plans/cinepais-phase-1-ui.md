@@ -291,7 +291,7 @@ Your next move: this plan goes through dual high-accuracy review (Momus + Oracle
   QA scenarios: happy: multimodal-looker verdict per pair records "structure matches reference" (verbatim quote in report). failure: grep report for unresolved "BLOCKER" entries → none.
   Commit: N
 
-- [ ] 14. States, responsive, a11y + docs + final commit - expect polished edge states and updated README
+- [x] 14. States, responsive, a11y + docs + final commit - expect polished edge states and updated README
   What to do / Must NOT do:
     - `loading.tsx` per route (`/`, `/films`, `/films/[id]`, `/showtimes/[id]`) with skeletons matching each layout; `error.tsx` (route-group level, Spanish: "Algo salió mal — vuelve a intentarlo") with reset button; verify empty states from Todos 8-12 render correctly.
     - Responsive: verify at 375×812 (mobile) and 1280×800 via Playwright `browser_resize` — no horizontal scroll on any surface (assert `document.documentElement.scrollWidth - document.documentElement.clientWidth <= 1` — clientWidth excludes the vertical scrollbar; ≤1px sub-pixel tolerance), seat map usable via zoom-out at mobile, grids collapse to 2 cols, header collapses (nav hidden behind city selector kept visible).
@@ -308,16 +308,16 @@ Your next move: this plan goes through dual high-accuracy review (Momus + Oracle
 ## Final verification wave
 > Runs in parallel after ALL todos. ALL must APPROVE. Surface results and wait for the user's explicit okay before declaring complete.
 
-- [ ] F1. Plan compliance audit
+- [x] F1. Plan compliance audit
   Delegate to `oracle`: read this plan + evidence files. Per todo 1-14 verify acceptance criteria demonstrably met. Per Must-NOT-have verify no violation: grep `web/` for `CineColombia`, `force-dynamic`, `embla|swiper|framer-motion|react-query|zustand|axios|dayjs|date-fns|luxon` in package.json, English UI strings in components (spot-check), fetch of own `/api/` inside `src/app/**/page.tsx` files (self-fetch ban), edits to `prisma/` (git diff vs phase-0-scaffold must show none). Output `APPROVE` or `REJECT: <list>`.
 
-- [ ] F2. Code quality review
+- [x] F2. Code quality review
   Delegate to `oracle`: read new/changed files under `web/src/`. Check: TS strict no `any`; pricing/selection pure (no IO); reducer not bypassed (grep setState on seats outside provider); tokens not hardcoded in components; server/client component boundaries correct (`"use client"` only where needed); no console.log; Spanish copy quality (accents correct: "Máximo", "función"). Output `APPROVE` or `REJECT: <file:line — issue>`.
 
-- [ ] F3. Real manual QA — full purchase flow
+- [x] F3. Real manual QA — full purchase flow
   Delegate to `unspecified-high` with Playwright MCP: seed fresh (`pnpm prisma db seed`), dev server up, then: (1) home renders carousel+grid; (2) switch city → grid consistent; (3) open film-01 → pick day 2 + IMAX → accordion → open the `optimal` planted showtime; (4) select 2 good adjacent seats → total = 2× API price; (5) attempt 5-seat selection → blocked with toast; (6) attempt orphan selection → blocked with toast; (7) wheelchair seat → dialog; (8) checkout → totals match; confirm → `CP-` order; re-run same selection → same order number; (9) sold-out planted showtime → all gray + CTA disabled; (10) `/films?format=Onyx` no-results path renders empty state. Record `/Users/reiorozco/Dev/cinepais/.omo/evidence/f3-cinepais-phase-1-ui.txt` + screenshots. Output `APPROVE` or `REJECT: <step>`.
 
-- [ ] F4. Scope fidelity
+- [x] F4. Scope fidelity
   Delegate to `oracle`: compare against `specs/002-implementation-plan.md` §Sesión B deliverables + spec 001 Gherkin #4 (manual flow), #5 (max 4), #6 (orphan) — confirm each demonstrably covered by evidence; confirm NO Fase C/D/E artifacts (no agent code, no chat UI, no deploy). Confirm the "antes" friction is preserved (manual flow deliberately multi-step — no shortcuts skipping the flow). Output `APPROVE` or `REJECT: <item>`.
 
 ## Commit strategy
