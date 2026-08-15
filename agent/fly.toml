@@ -1,0 +1,93 @@
+# fly.toml — CinePaís copilot agent
+#
+# Scale-to-zero by design. This is a portfolio demo: the machine is expected to be stopped
+# almost all of the time, and the numbers below are cost controls rather than defaults
+# waiting to be "tuned". The pre-deploy baseline measured on the Fly account was an
+# upcoming invoice of $0.01, which is the empirical reason to keep it that way.
+#
+# Secrets are deliberately absent. Only non-secret configuration lives in [env]; the Gemini
+# key (and a LangSmith key, if tracing is ever switched on) is set out of band with
+# `fly secrets set`, which is what makes this file safe to commit and to read in a diff.
+
+app = 'cinepais-agent'
+
+# Ashburn, Virginia — chosen, not defaulted. The Neon database behind the web read API runs
+# in AWS us-east-1 (read off its endpoint hostname during the production migrate/seed run), and
+# Vercel built and serves the production deployment out of its own iad1 region. 'iad' is the Fly
+# region co-located with both, so the agent's tool path — agent -> web read API -> Neon —
+# takes the shortest hop available instead of crossing the country on every MCP call.
+primary_region = 'iad'
+
+[build]
+  dockerfile = 'Dockerfile'
+
+# NON-SECRET configuration only, and every value is one already proven upstream rather than
+# guessed here: the web origin is the production alias confirmed live (HTTP 200, PREDICTED ==
+# ACTUAL) before this file was written.
+[env]
+  # Declarative. The image's CMD already hardcodes `--port 8080` (Dockerfile:70) and nothing
+  # in the app reads this variable, so it is stated here for the reader and for parity with
+  # internal_port below — not as a runtime input.
+  PORT = '8080'
+
+  # Base URL for the read API. This one is load-bearing in a way that is easy to miss:
+  # agent.py:99-108 passes it explicitly into the MCP stdio child's environment, because
+  # mcp 1.29.0 otherwise spawns that child with a near-empty env and it falls back to
+  # config.py:8's http://localhost:3000 — correct locally, silently wrong in a container
+  # where nothing listens on :3000.
+  WEB_API_BASE_URL = 'https://cinepais.vercel.app'
+
+  # CORS allowlist. Comma-separated and parsed at config.py:22-30; production origin only,
+  # since an allowlist that is wider than it needs to be is not an allowlist.
+  CORS_ORIGIN = 'https://cinepais.vercel.app'
+
+  # Pin the validated model. config.py:17 defaults this to the empty string, and an empty
+  # value sends startup into live model discovery — real network calls to Google before any
+  # visitor has asked anything. Setting it is what keeps the cold-start path quiet and cheap.
+  AGENT_MODEL_OVERRIDE = 'gemini-3.6-flash'
+
+  # Global budget of accepted /chat requests per UTC day. The counter is in-process, so a
+  # cold start resets it: a courtesy brake, not the spend ceiling. The real ceiling is the
+  # provider-side hard cap configured outside this repo.
+  DAILY_REQUEST_CAP = '40'
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+
+  # The three lines that keep the bill at roughly nothing: stop the machine once it goes
+  # idle, wake it again on the next request, and keep nothing warm in between. The price of
+  # that trade is a ~20 s cold start on the first question after an idle period, which the
+  # README documents as a known limitation instead of hiding it.
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [http_service.concurrency]
+    type = 'requests'
+
+    # Deliberately far below the usual 10/20. Every /chat runs a ReAct loop, and the MCP
+    # client opens a FRESH stdio session per tool call — an entire new Python interpreter
+    # (agent.py:99-108), with close_agent() at agent.py:151-153 being a no-op. On a 1 GB
+    # machine, twenty concurrent streams is one `curl` loop away from an OOM kill, and the
+    # per-IP rate limit is 10 per MINUTE (main.py:137), which does not bound *concurrency*
+    # at all. A portfolio demo needs no more than this.
+    soft_limit = 3
+    hard_limit = 5
+
+  # Platform-side liveness probe, mirroring the image's own HEALTHCHECK (Dockerfile:63-64)
+  # against /health (main.py:131-133). grace_period covers lifespan startup, which builds
+  # the agent and probes the MCP server before the listener accepts traffic.
+  [[http_service.checks]]
+    method = 'GET'
+    path = '/health'
+    interval = '30s'
+    timeout = '5s'
+    grace_period = '15s'
+
+[[vm]]
+  # Smallest shared tier, with memory raised from that preset's 256 MB to 1 GB because the
+  # process holds the LangGraph agent plus a short-lived extra interpreter per tool call.
+  # Not a dedicated-CPU tier: those bill continuously for headroom this demo never uses.
+  size = 'shared-cpu-1x'
+  memory = '1gb'
