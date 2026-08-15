@@ -497,13 +497,48 @@ Count them in `.omo/evidence/llm-spend-cinepais-phase-4-deploy.txt`, appending o
 
 ### Wave 5 — Deploy the agent to Fly.io and prove the things that only exist live
 
-- [ ] 26. `[MANUAL — USER]` ×2: confirm Fly billing, then set the hard Google spend cap
+- [~] 26. `[MANUAL — USER]` ×2: confirm Fly billing, then set the hard Google spend cap
   - **Why:** the org `personal` was created **2026-07-26**, *after* Fly removed free allowances — it is pay-as-you-go, not grandfathered. Bills stay ≈ $0 only because `min_machines_running = 0` keeps usage under the minimum billing threshold. And the only true ceiling on Gemini spend is a cap that **stops calls**, not one that emails an alert.
   - **`[MANUAL — USER]` A:** the user opens the Fly dashboard billing page and reports the plan, any free allowance, trial status, and payment method. **No `fly deploy` runs until this is reported.** (`fly billing` does not exist in `flyctl` v0.4.83 — this cannot be automated.)
   - **`[MANUAL — USER]` B:** the user configures a spend cap on the Google side for the Gemini API and reports **both** the amount **and whether it hard-stops requests or only sends an alert.**
   - **🔴 STOP CONDITION (user decision at the approval gate — this reverses the plan's earlier fallback):**
     **If the account can only ALERT and cannot hard-stop, this wave STOPS here and the user is consulted before the agent is exposed publicly.** Do **not** fall back to "treat the Todo 5 daily cap as the primary control" — that reasoning is wrong and the plan previously had it backwards. The Todo 5 counter lives in an in-process cache, and Todo 30 configures `min_machines_running = 0` with auto-stop at ≈ 4 min idle, so **the counter resets on every cold start**: send the cap, wait five minutes, it is zero again. It is a courtesy brake, never a ceiling. The Google-side hard stop is the only real ceiling on a publicly reachable endpoint.
-  - **Accept:** the evidence records both user reports verbatim, including the cap amount and an explicit `HARD-STOP` or `ALERT-ONLY` verdict. **If either report is missing, or the verdict is `ALERT-ONLY`, STOP the wave and report to the user. Nothing further in Wave 5 runs.**
+  - **⚠️ There are THREE possible states, not two.** The original wording offered only `HARD-STOP` / `ALERT-ONLY` and omitted the one that is most likely here — and which is *safer* than either:
+
+    | State | How to recognise it | Verdict |
+    |---|---|---|
+    | **A — `NO-BILLING`** | The Google Cloud project behind the API key has **no billing account linked** (Cloud Console shows "This project has no billing account"; AI Studio shows the key on the free tier) | ✅ **GREEN — proceed.** Spend is not capped, it is *impossible*. Over-quota requests **fail** with 429/quota errors; they are never charged. This is structurally stronger than any spend cap. The agent already surfaces provider errors through its Spanish `error` event path, so the failure mode is a polite message, not a bill. |
+    | **B — `HARD-STOP`** | A billing account exists **and** a spend cap is configured that **pauses API calls** at the limit | ✅ **GREEN — proceed.** Record the amount. |
+    | **C — `ALERT-ONLY`** | A billing account exists and the only available control **emails a warning** while calls keep succeeding | 🔴 **RED — STOP the wave.** Report to the user and do not expose the agent. |
+
+  - **Accept:** the evidence records both user reports verbatim and an explicit verdict of `NO-BILLING`, `HARD-STOP`, or `ALERT-ONLY`, **with the specific dashboard text that justifies it** — not the executor's inference. **If a report is missing, or the verdict is `ALERT-ONLY`, STOP the wave and report to the user. Nothing further in Wave 5 runs.**
+  - **Do not guess between A and C.** "I saw no cap configured" is ambiguous: it is state A if no billing account exists, and state C if one does. The distinguishing question is **whether a billing account is linked**, and only the user can see that. Ask it explicitly rather than inferring.
+
+  ### ✅ RESOLVED — user reports, recorded 2026-08-15 (verdict: proceed)
+
+  **A. Fly.io** — org `personal`, Account Status `Good Standing`, **Credit Balance `$0.00`** (no free
+  allowance — confirms the org is post-grandfathering, as established in the draft), Payment Method
+  **`Charged automatically`**, Last Invoice `$0.00`, **Upcoming Invoice `$0.01`**, 0 linked organizations.
+
+  > **Read this correctly: Fly has NO hard cap.** "Charged automatically" means any real consumption
+  > reaches the card. The `$0.01` upcoming invoice is empirical proof that **`min_machines_running = 0`
+  > is what keeps the bill at zero** — usage stays under the minimum billing threshold. Therefore
+  > **`min_machines_running = 0`, `auto_stop_machines = 'stop'`, `soft_limit = 3` and `hard_limit = 5`
+  > are cost controls, not tuning.** §Scope OUT already forbids raising them; this is the measurement
+  > behind that prohibition. Bounded worst case: `shared-cpu-1x`/1 GB running 24/7 ≈ **USD 2/month**, so
+  > even a never-sleeping machine cannot produce a surprising bill.
+
+  **B. Google Gemini** — billing account **linked**, **Spend Cap configured**, and the account operates
+  on a **prepaid balance** model: spend is limited to the loaded balance and does not fall through to the
+  card once the balance is exhausted. ⇒ Verdict **`HARD-STOP`**, with two independent layers (the cap
+  stops calls; an empty balance makes calls fail rather than charge). Note the documented ~10-minute
+  reporting delay on spend caps — a burst can overshoot slightly, bounded by the prepaid balance.
+
+  **Verdict: `HARD-STOP` → GREEN. Wave 5 may proceed.**
+
+  - **Ongoing monitor (cheap, do it at Todo 36 and again at the phase close):** re-read Fly's *Upcoming
+    Invoice*. The pre-deploy baseline is **`$0.01`**. If it has moved to dollars rather than cents after
+    the agent is live, the scale-to-zero assumption has broken — report it rather than absorbing it.
   - **Evidence:** `task-26-…txt`.
 
 - [ ] 27. `agent/Dockerfile` + `agent/.dockerignore`: single-stage Python image
