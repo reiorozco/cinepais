@@ -497,7 +497,7 @@ Count them in `.omo/evidence/llm-spend-cinepais-phase-4-deploy.txt`, appending o
 
 ### Wave 5 — Deploy the agent to Fly.io and prove the things that only exist live
 
-- [~] 26. `[MANUAL — USER]` ×2: confirm Fly billing, then set the hard Google spend cap
+- [x] 26. `[MANUAL — USER]` ×2: confirm Fly billing, then set the hard Google spend cap
   - **Why:** the org `personal` was created **2026-07-26**, *after* Fly removed free allowances — it is pay-as-you-go, not grandfathered. Bills stay ≈ $0 only because `min_machines_running = 0` keeps usage under the minimum billing threshold. And the only true ceiling on Gemini spend is a cap that **stops calls**, not one that emails an alert.
   - **`[MANUAL — USER]` A:** the user opens the Fly dashboard billing page and reports the plan, any free allowance, trial status, and payment method. **No `fly deploy` runs until this is reported.** (`fly billing` does not exist in `flyctl` v0.4.83 — this cannot be automated.)
   - **`[MANUAL — USER]` B:** the user configures a spend cap on the Google side for the Gemini API and reports **both** the amount **and whether it hard-stops requests or only sends an alert.**
@@ -541,7 +541,7 @@ Count them in `.omo/evidence/llm-spend-cinepais-phase-4-deploy.txt`, appending o
     the agent is live, the scale-to-zero assumption has broken — report it rather than absorbing it.
   - **Evidence:** `task-26-…txt`.
 
-- [ ] 27. `agent/Dockerfile` + `agent/.dockerignore`: single-stage Python image
+- [x] 27. `agent/Dockerfile` + `agent/.dockerignore`: single-stage Python image
   - **Precedent (adapt, do not copy):** `matchday-agent/Dockerfile` — four hard-won fixes to carry over: (1) `useradd` + `chown` the WORKDIR **before** `uv sync`, or `.venv/` ends up root-owned and the container crash-loops; (2) `ENV PATH="/app/.venv/bin:${PATH}"`; (3) two-step `uv sync` — `--no-dev --frozen --no-install-project` after copying only `pyproject.toml`+`uv.lock`, then a full `uv sync --no-dev --frozen` after copying source (a missing step 2 caused `ModuleNotFoundError` on their first deploy); (4) `CMD` with the **absolute venv path**, never `uv run uvicorn`, which re-syncs on every start.
   - **Key divergence — do NOT include a Node stage.** `matchday-agent` needs Node because its MCP server is an external npm package. CinePaís's MCP is an **in-repo Python module**: `agent/src/cinepais_agent/agent.py:83-97` spawns `sys.executable -m cinepais_agent.mcp_server`. A single `python:3.12-slim` stage suffices, and starting via `/app/.venv/bin/uvicorn` makes `sys.executable` resolve inside the venv — exactly what that spawn requires.
   - **Do:** write the Dockerfile serving on port **8080** (`--host 0.0.0.0 --port 8080`) plus a `HEALTHCHECK` hitting `/health` (which already exists at `agent/src/cinepais_agent/main.py:100-102`). Write `.dockerignore` excluding `.git/`, `.venv/`, `__pycache__/`, `.pytest_cache/`, `.ruff_cache/`, `.env` and `.env.*` **while keeping `.env.example`**, `.omo/`, `docs/`, and the deploy artifacts themselves.
@@ -565,7 +565,7 @@ Count them in `.omo/evidence/llm-spend-cinepais-phase-4-deploy.txt`, appending o
   - **LLM spend: 0 `POST /chat`.** No chat request is ever issued here. With the override set, no generation call is attempted either.
   - **Evidence:** `task-27-…txt`.
 
-- [ ] 28. `agent/fly.toml`: scale-to-zero configuration
+- [x] 28. `agent/fly.toml`: scale-to-zero configuration
   - **Do:** author it with — `app = 'cinepais-agent'` (or the Todo 21 substitute); `primary_region = 'iad'`, justified in a comment by the Neon region recorded in Todo 23 and by Vercel proximity; `[build] dockerfile = 'Dockerfile'`; `[env] PORT = '8080'`; `[http_service]` with `internal_port = 8080`, `force_https = true`, **`auto_stop_machines = 'stop'`** (the string form, as authored in the precedent), `auto_start_machines = true`, **`min_machines_running = 0`**; `[http_service.concurrency]` `type = 'requests'`, **`soft_limit = 3`, `hard_limit = 5`**; `[[http_service.checks]]` `GET /health`, `interval = '30s'`, `timeout = '5s'`, `grace_period = '15s'`; and `[[vm]] size = 'shared-cpu-1x'`, `memory = '1gb'`. **No `performance-*` size.**
   - **⚠️ Concurrency is deliberately lower than the precedent's 10/20.** Each concurrent `/chat` runs a ReAct loop, and the MCP client opens a **fresh stdio session — a new Python interpreter — per tool call** (`agent.py:89-97`; `close_agent()` at `:138-140` is a no-op). Twenty concurrent streams on a 1 GB VM is a trivial `curl` loop away from an OOM, and the per-IP limit is 10 **per minute**, which does not bound *concurrency* at all. The precedent repo already OOM-killed a Fly VM in exactly this class. A portfolio demo needs no more than 3/5.
   - **Non-secrets belong in `[env]`, secrets in `fly secrets`** (the precedent's own split, and what makes the QA below meaningful): `PORT`, `WEB_API_BASE_URL`, `CORS_ORIGIN`, `AGENT_MODEL_OVERRIDE`, and `DAILY_REQUEST_CAP` are **not** secrets → put them in `[env]`. Only `GOOGLE_API_KEY` (and LangSmith keys, if enabled) go through `fly secrets`.
@@ -573,7 +573,7 @@ Count them in `.omo/evidence/llm-spend-cinepais-phase-4-deploy.txt`, appending o
   - **QA:** re-read the file and confirm no **secret value** appears anywhere in it — `grep -ciE 'AIza|lsv2_|FlyV1' agent/fly.toml` → `0` (positive control: `grep -c "GOOGLE_API_KEY" agent/fly.toml` → `0` as well, since the key name itself must not appear here — it is set via `fly secrets`).
   - **Evidence:** `task-28-…txt`.
 
-- [ ] 29. Fly: set secrets and deploy the agent
+- [x] 29. Fly: set secrets and deploy the agent
   - **Do:** create the app in the `personal` org. Put the **non-secrets in `fly.toml [env]`** (Todo 28): `PORT=8080`, `WEB_API_BASE_URL` = the **ACTUAL** Vercel production URL resolved in Todo 24, `CORS_ORIGIN` = the same URL, `AGENT_MODEL_OVERRIDE=gemini-3.6-flash`, `DAILY_REQUEST_CAP` from Todo 5. Set **only** `GOOGLE_API_KEY` through `fly secrets set --stage`. **Never echo a secret value into any log, terminal capture, or evidence file** — record names only. Then deploy.
   - **Accept:** `fly status -a cinepais-agent` shows a machine · `fly secrets list -a cinepais-agent` lists **only** `GOOGLE_API_KEY` (names only; values must not appear) · `curl -s -o /dev/null -w '%{http_code}' https://cinepais-agent.fly.dev/health` → `200`.
   - **QA (startup):** `fly logs` shows `Using AGENT_MODEL_OVERRIDE: gemini-3.6-flash` and `Agent initialized successfully` (`main.py:29` calls `logging.basicConfig(level=logging.INFO)` at import precisely so these survive under uvicorn). Failure path: the log must contain no `Failed to initialize agent`, and **no `Using model:`** — that string would mean the override was ignored and live model discovery ran.
@@ -591,7 +591,7 @@ Count them in `.omo/evidence/llm-spend-cinepais-phase-4-deploy.txt`, appending o
   - **This todo spends zero `/chat` calls.**
   - **Evidence:** `task-29-…txt` with the secret **names** only and the full MCP tool-call transcript.
 
-- [ ] 30. Rebuild the web so the inlined agent URL takes effect, then prove CORS live
+- [x] 30. Rebuild the web so the inlined agent URL takes effect, then prove CORS live
   - **Why:** `NEXT_PUBLIC_AGENT_URL` was set in Todo 21 but is baked at build time; unless the deployment that serves users was built after that, the widget still points at `localhost:8000`. And **CORS can only ever be proven live** — Playwright `route.fulfill` satisfies a request without a real preflight (Fase D measured `preflight: 0`), so no fixture can catch a misconfiguration.
   - **Do:** trigger a fresh production deployment, then verify from a shell.
   - **Accept:** a preflight probe returns the right header —
@@ -605,7 +605,7 @@ Count them in `.omo/evidence/llm-spend-cinepais-phase-4-deploy.txt`, appending o
   - **Evidence:** `task-30-…txt` with both preflight transcripts.
   - **LLM spend: 0.**
 
-- [ ] 31. Live end-to-end proof against the deployed pair — **budgeted at 2 `POST /chat` calls**
+- [x] 31. Live end-to-end proof against the deployed pair — **budgeted at 2 `POST /chat` calls**
   - **⚠️ ANNOUNCE TO THE USER BEFORE RUNNING.** This is the only todo in the phase that spends money. Two queries, matching Fase D's total for its whole phase.
   - **Do:** with the agent **cold** (stopped — confirm via `fly status` first), open `<WEB_URL>` in a browser, open the copilot, and ask exactly **two** Spanish queries, each targeting a named planted scenario (`web/prisma/seed.ts:232` defines all four: `soldout`, `front-only`, `optimal`, `no-adjacent`):
     - **Query 1 → the `no-adjacent` / `front-only` territory:** ask for several seats together in IMAX on a near date, phrased naturally in Spanish, so the copilot must confront limited adjacency and explain the tradeoff.
@@ -618,7 +618,7 @@ Count them in `.omo/evidence/llm-spend-cinepais-phase-4-deploy.txt`, appending o
     3. **Auto-stop** — the precedent measured ≈ 4 min after the last request. Note the observed behaviour.
   - **Evidence:** `task-31-…png` (money shot: card + pre-selected seats) + `task-31-…txt` with the timings, plus **2 appended lines** in `llm-spend-cinepais-phase-4-deploy.txt`.
 
-- [ ] 32. Fix anything Todo 31's three measurements exposed
+- [x] 32. Fix anything Todo 31's three measurements exposed
   - **Do:** if the timeout copy fires too early, widen it and adjust the Spanish copy to set expectations about a cold start. If streaming was buffered, record the finding and the mitigation attempted. If a defect is cosmetic and out of scope, record it in the README's **Known limitations** instead of fixing it — and say which choice was made and why. **Preserve the Fase D session-cap copy correction** (the plan's original wording was factually false; `sessionStorage` survives a reload — the shipped copy naming "new tab, or come back later" is correct and must not be reverted).
   - **Accept:** agent trio + web lint/tsc exit 0. If no change was needed, record that explicitly with the measurements that justify it.
   - **QA:** re-verify with **fixtures only** — zero further live spend.
