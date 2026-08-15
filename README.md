@@ -238,11 +238,13 @@ Written down rather than papered over.
   deploy phase a re-seed did stall partway through, which is exactly that failure — caught because a human
   was watching it.
 - **Cold start of roughly 20 s on the copilot's first request.** The `cinepais-agent` machine runs on
-  Fly.io with `min_machines_running = 0` and auto-stops about 4 minutes after the last request, so the
-  first question after an idle period pays for waking the machine, loading Python and spawning the MCP
-  subprocess. Warm
-  requests are far quicker. The site itself is unaffected — only `/chat` waits. This is a cost trade for a
-  portfolio demo; raising `min_machines_running` to `1` removes it and changes the bill.
+  Fly.io with `min_machines_running = 0` and stops itself once it has gone idle, so the first question
+  after an idle period pays for waking the machine, loading Python and spawning the MCP subprocess.
+  Measured live, that idle window ran anywhere from **~2 to ~9 minutes** after the last request — Fly
+  Proxy sweeps idle machines on a periodic tick rather than counting down from each one, so the exact
+  moment it stops is not something to plan around. Warm requests are far quicker. The site itself is
+  unaffected — only `/chat` waits. This is a cost trade for a portfolio demo; raising
+  `min_machines_running` to `1` removes it and changes the bill.
 - **The copilot is capped at 40 `/chat` requests per UTC day, and that cap is a courtesy brake, not a
   spend guarantee.** The counter lives in the agent process, and the process stops when the machine
   scales to zero — so a cold start resets it. It bounds one warm machine's day, not the invoice. The only
