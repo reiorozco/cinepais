@@ -250,10 +250,6 @@ This loads the seat map with seats `1_1_10` and `1_1_11` already selected and a 
 
 Pre-selection runs through the same business rules as manual selection, so a seat can be silently dropped from the recommendation if it's already sold, would create an orphan seat, would push the selection past the max of 4, or is a wheelchair/accessibility seat — the banner tells the person this happened, in Spanish, so they always know why fewer seats than requested ended up marked.
 
-### Known contract gap (advisory for Fase E)
-
-`agent/docs/sse-contract.md`'s `recommendation` event schema shows `"priceFrom": 32000` without noting that the field is nullable. In the actual event model (`agent/src/cinepais_agent/events.py:47`) `priceFrom` is typed `int | None` — unlike sibling fields such as `showtimeId` and `filmId`, which the same doc does mark `string | null`. A client built strictly off the documented example could crash or render "$undefined" on a `no_availability` outcome where `priceFrom` comes back `null`. The web widget itself guards against this, but the contract doc under-specifies it — flagged here for Fase E to fix in `agent/docs/sse-contract.md` (out of scope for this phase; that file was intentionally left untouched).
-
 ## Determinism
 
 The seed uses `SEED` (PRNG seed) and `SEED_NOW` (reference time) env vars. Same values → same DB state on any machine.

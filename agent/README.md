@@ -123,7 +123,7 @@ See [`docs/sse-contract.md`](docs/sse-contract.md) for the full event schema and
 
 - **Least-privilege tools**: the agent has only 4 read-only cinema tools — no email, browse, exec, or file access. Even if jailbroken, the damage ceiling is low (mock data, no PII).
 - **Scope enforcement**: the system prompt restricts the agent to cinema/booking questions only; off-topic queries are politely refused and redirected.
-- **Per-IP rate limit**: 10 requests/minute (slowapi 0.1.10 decorator-only — `SlowAPIMiddleware` is intentionally omitted as it breaks SSE streaming).
+- **Per-IP rate limit**: 10 requests/minute (slowapi 0.1.10 decorator-only — `SlowAPIMiddleware` is intentionally omitted as it breaks SSE streaming). Keyed off the `Fly-Client-IP` header (falls back to `get_remote_address` in local dev, where the header is absent) — behind Fly's proxy the socket peer is the edge, not the visitor, so the raw remote address would collapse every visitor into one bucket.
 - **Input cap**: messages > 2000 characters are rejected with a Spanish error event.
 - **Session query cap**: 20 queries/session (resets after 1 hour or restart — courtesy limit, not a hard cost control).
 - **Global daily request cap**: `DAILY_REQUEST_CAP` (default 40) accepted `/chat` requests per UTC day across all visitors, checked after the empty-message and length guards so malformed input never spends budget, and before the session cap so rotating a client-chosen `sessionId` cannot buy a fresh allowance. Over the cap the agent answers with a `daily_cap_exceeded` error event in Spanish. **Courtesy brake, not a hard ceiling — the counter is in-process and resets on every cold start.**

@@ -61,11 +61,15 @@ Definir/estabilizar este contrato en la **Sesión A**. Con eso, **UI (B)** y **a
 **Prompt para pegar:**
 > Proyecto CinePaís. Fases 1 (UI) y 2 (agente SSE) están listas. Estoy en la **Fase 3**. En **plan mode**, valida un plan para integrar el **copiloto** en `web/`: widget de chat que streamea desde el agente (SSE), y **human-in-the-loop** — cuando el agente recomienda una función + sillas, la UI navega a esa función y **pre-selecciona** las sillas en el mapa (resaltadas, sin comprar), esperando la confirmación del usuario antes del checkout simulado. Lee `specs/001-...md` (escenarios 3) y `002`. Al aprobar, impleméntalo.
 
-### Sesión E — Fase 4: Pulido + demo + post
+### Sesión E — Fase 4: Pulido + demo + post — ✅ DONE
 **Objetivo:** dejarlo impecable para portafolio y grabar el contraste.
 **Entregables:** escenarios seed para el demo (casos "no hay juntas", "solo primera fila", "mejor del finde"), recorrido **"antes vs. después"**, video/GIF grabado, borrador del **post de LinkedIn** (ángulo skill-story + link a Fleet AI), deploy (Vercel + Fly.io).
 **Prompt para pegar:**
 > Proyecto CinePaís, todo integrado (Fase 3). Estoy en la **Fase 4**. En **plan mode**, valida un plan para: (1) sembrar escenarios que hagan brillar al agente (sin N juntas, solo primera fila con alternativa, mejor función del finde por calidad, sold-out), (2) preparar el recorrido **"antes vs. después"** grabable, (3) desplegar (web→Vercel, agent→Fly.io), y (4) redactar el borrador del post de LinkedIn (skill-story: "en Fleet AI replicaba web apps para entrenar agentes; acá construí una réplica de un cine + un copiloto que arregla un dolor real de UX", con equilibrio cliente↔cine). Al aprobar, ejecútalo.
+
+Ejecutado según `.omo/plans/cinepais-phase-4-deploy.md`. Recorrido "antes vs. después" en
+`specs/003-demo-script.md`; borrador del post de LinkedIn en `specs/004-linkedin-post.md` una vez
+redactado.
 
 ---
 

@@ -43,9 +43,16 @@ The web app exposes a read API consumed by both the UI and the agent:
 - **Observability:** LangSmith tracing; log refusals to spot abuse patterns.
 - Ref: OWASP LLM01 (prompt injection) / OWASP Top-10 for Agentic Applications 2026.
 
-## Deploy & cost (portfolio demo → ~free)
-- `web/` → **Vercel** (Hobby, free) · `db` → **Neon** free tier (or seed data in-repo) · `agent/` → **Fly.io** scale-to-zero.
-- LLM → **Gemini Flash**; set a **budget cap** so curious traffic can't blow the bill. Expected cost: ~free to a few USD/mo.
+## Deploy & cost (portfolio demo → kept ≈$0, not literally free)
+- `web/` → **Vercel** (Hobby, no cost) · `db` → **Neon** free tier.
+- `agent/` → **Fly.io**, app `cinepais-agent`, region `iad`, `shared-cpu-1x`/1GB VM. Fly.io is
+  **pay-as-you-go** — this org has no complimentary allotment (created after Fly discontinued its no-cost
+  plan) — kept at ≈$0/mo purely by `min_machines_running = 0` (scale-to-zero): measured upcoming invoice
+  was $0.01 with the agent live. Bounded worst case if scale-to-zero ever broke: shared-cpu-1x/1GB running
+  24/7 ≈ USD 2/month.
+- Spend is bounded by two independent layers: a **hard spend cap on the Google Gemini billing account**
+  (prepaid balance, calls fail once exhausted — verified HARD-STOP) and the agent's own in-app
+  `DAILY_REQUEST_CAP` (courtesy brake, resets on cold start, not a substitute for the Google-side cap).
 
 ## Workflow
 - For each phase, **start in plan mode** (analyze/validate) and implement after approval.

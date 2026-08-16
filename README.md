@@ -4,7 +4,7 @@ A mock cinema-ticketing site for Colombia, plus an AI copilot that answers quest
 *"¿dónde veo La Odisea en IMAX este finde con 2 sillas juntas?"* and pre-selects the seats it recommends —
 without ever taking the buying decision away from the person.
 
-**Live**: `<WEB_URL>` · **Copilot API**: `<AGENT_URL>` · **License**: MIT
+**Live**: <https://cinepais.vercel.app> · **Copilot API**: <https://cinepais-agent.fly.dev> · **License**: MIT
 
 > **CinePaís is a fictional brand.** It is not affiliated with, endorsed by, or connected to any real
 > cinema chain, and no real cinema API is ever called — nothing is scraped either. Every film, site,
@@ -15,7 +15,7 @@ without ever taking the buying decision away from the person.
 
 ## Live demo
 
-Open `<WEB_URL>`, pick a film, choose a date and format, open a showtime, select seats, check out.
+Open <https://cinepais.vercel.app>, pick a film, choose a date and format, open a showtime, select seats, check out.
 That is the whole manual flow, and it works without the copilot.
 
 Then open the chat bubble and ask it something in Spanish:
@@ -30,7 +30,7 @@ seat), a banner says so in Spanish rather than silently marking fewer seats.
 The copilot API is also reachable directly over SSE:
 
 ```bash
-curl -sN -X POST '<AGENT_URL>/chat' \
+curl -sN -X POST 'https://cinepais-agent.fly.dev/chat' \
   -H 'content-type: application/json' \
   -d '{"message":"¿Dónde veo La Odisea en IMAX este finde con 2 sillas juntas?","sessionId":"demo-1"}'
 ```
@@ -237,10 +237,12 @@ Written down rather than papered over.
   died mid-run at 3am would leave the live database empty with nobody watching. During Wave 1 of the
   deploy phase a re-seed did stall partway through, which is exactly that failure — caught because a human
   was watching it.
-- **Cold start of roughly 20 s on the copilot's first request.** The `cinepais-agent` machine runs on
-  Fly.io with `min_machines_running = 0` and stops itself once it has gone idle, so the first question
-  after an idle period pays for waking the machine, loading Python and spawning the MCP subprocess.
-  Measured live, that idle window ran anywhere from **~2 to ~9 minutes** after the last request — Fly
+- **Cold start on the copilot's first request: ~9.5 s to the first response byte, ~25 s until the turn
+  finishes streaming** (measured live against the deployed pair — warm requests came back in ~180 ms to
+  the first byte). The `cinepais-agent` machine runs on Fly.io with `min_machines_running = 0` and stops
+  itself once it has gone idle, so the first question after an idle period pays for waking the machine,
+  loading Python and spawning the MCP subprocess. Measured live, that idle window ran anywhere from
+  **~2 to ~9 minutes** after the last request — Fly
   Proxy sweeps idle machines on a periodic tick rather than counting down from each one, so the exact
   moment it stops is not something to plan around. Warm requests are far quicker. The site itself is
   unaffected — only `/chat` waits. This is a cost trade for a portfolio demo; raising
