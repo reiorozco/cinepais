@@ -681,7 +681,7 @@ Count them in `.omo/evidence/llm-spend-cinepais-phase-4-deploy.txt`, appending o
   - **QA:** for each edited file, quote in the evidence the line that previously made the false claim and the line that replaces it. Do not paraphrase.
   - **Evidence:** `task-37-…txt`.
 
-- [ ] 38. **Wave 6 close + phase handoff — HARD GATE**
+- [x] 38. **Wave 6 close + phase handoff — HARD GATE**
   - **Do:** full gate (agent trio → web lint → tsc → detached `pnpm test` → `pnpm build`). Commit, push `main`, then write `.omo/handoff-fase-e-final.md` covering: what shipped, the live URLs, the exact total LLM spend with its reproduction command, every `[MANUAL — USER]` step and its outcome, all measurements from Todos 12/31, and every deviation.
   - **Commit:** `docs: demo script, LinkedIn draft, and deployment documentation`
   - **⚠️ `pnpm test` re-seeds the shared Neon DB three times.** If Todo 23 recorded that production and dev **share one database**, running the full gate here would wipe the live demo the phase just proved and recorded on video. In that case: do **not** run `pnpm test` blind — either point it at a separate database, or run the gate and then **re-run `web/scripts/reseed.sh` against production afterwards**, re-verifying the catalogue. Record which route was taken.
