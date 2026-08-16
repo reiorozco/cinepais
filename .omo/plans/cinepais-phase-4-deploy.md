@@ -633,7 +633,7 @@ Count them in `.omo/evidence/llm-spend-cinepais-phase-4-deploy.txt`, appending o
 
 ### Wave 6 — Demo, post, and documentation truth
 
-- [ ] 34. `specs/003-demo-script.md`: the "antes vs. después" shot list
+- [x] 34. `specs/003-demo-script.md`: the "antes vs. después" shot list
   - **Do:** write a shot-by-shot script contrasting the two paths. **Before:** the manual flow — home → film → date/format → accordion → seat map → hunt for 2 adjacent good seats → checkout. **After:** one Spanish question to the copilot → recommendation card → CTA → seats already pre-selected. Include the exact Spanish queries to type, the planted scenario to use, expected durations, and a **pre-flight checklist**: re-seed with a recomputed `SEED_NOW`, `curl` the API for a non-empty array, and **warm the agent** with a `GET /health` before recording so the ~21 s cold start does not appear in the video. Reference the existing money-shot captures `.omo/evidence/task-16-live-hitl.png` and `task-14-hitl-money-shot.png` as framing references. Note that showtime ids encode a **day offset** from `SEED_NOW`, so never hardcode a `businessDate` in the script.
   - **Accept:** the file exists; every command in its pre-flight section is executed verbatim and recorded as exit 0; `grep -cE '20[0-9]{2}-[0-9]{2}-[0-9]{2}' specs/003-demo-script.md` → `0` (no hardcoded dates; positive control: `grep -c 'SEED_NOW' specs/003-demo-script.md` → ≥ 1).
   - **QA (part 1):** walk the "before" path once on the deployed site and confirm each scripted step matches reality; correct the script where it does not.
@@ -661,20 +661,20 @@ Count them in `.omo/evidence/llm-spend-cinepais-phase-4-deploy.txt`, appending o
   - **Evidence:** `task-34-…txt` with both scenario responses.
   - **LLM spend: 0** (the "after" path is walked during recording, inside the Todo 35 budget).
 
-- [ ] 35. `[MANUAL — USER]`: record the video/GIF
+- [~] 35. `[MANUAL — USER]`: record the video/GIF
   - **Why:** an agent cannot record the user's screen. This step is the user's.
   - **Do:** the executor runs the Todo 34 pre-flight, confirms the site and agent are warm and the seed is fresh, and hands the user the script. The user records. **Budget: up to 2 additional `POST /chat` calls** for the take(s) — announce before each, and append to the spend file.
   - **Accept:** the user confirms a recording exists and states where it lives. **Store the video OUTSIDE the repo** (it would bloat a public repo); the README links to it instead. Record the chosen location.
   - **QA:** the executor re-verifies the seed is still fresh (`curl` → non-empty) immediately before the user records; a stale seed mid-recording is the single most likely failure.
   - **Evidence:** `task-35-…txt` with the pre-flight results and the spend lines.
 
-- [ ] 36. `specs/004-linkedin-post.md`: the post draft
+- [x] 36. `specs/004-linkedin-post.md`: the post draft
   - **Do:** write the draft in **Spanish** (it is user-facing copy). Angle, per `specs/002` §Sesión E: the skill-story — *"en Fleet AI replicaba web apps para entrenar agentes; acá construí una réplica de un cine + un copiloto que arregla un dolor real de UX"* — landing the client↔business balance as the business point (the copilot recommends by seat quality **without ever discouraging the sale**). Follow the user's own format precedent at `matchday-agent/docs/marketing/linkedin.md`. Include the demo link, the repo link, and an honest one-liner that the data is mock and the brand fictional. Given the Q1 decision to ship a curated `.omo/`, include one short line about the orchestration process being visible in the repo. **No attribution lines. Never name CineColombia.**
   - **Accept:** the file exists; `grep -ci "cinecolombia" specs/004-linkedin-post.md` → `0` (positive control: `grep -ci "cinepais"` → ≥ 3); `grep -ciE "generated with|co-authored-by" specs/004-linkedin-post.md` → `0`.
   - **QA:** every URL in the draft is fetched and returns 200 — a post with a dead link is the failure mode that matters here.
   - **Evidence:** `task-36-…txt` with each URL's status code.
 
-- [ ] 37. Make the documentation tell the truth about what was actually shipped
+- [x] 37. Make the documentation tell the truth about what was actually shipped
   - **Why:** "a Verification section that disagrees with the shipped code is worse than none — it is what reviewers cite." Several docs now contain claims this phase invalidated.
   - **Do:** update, after **re-reading each file**: root `README.md` — replace `<WEB_URL>`/`<AGENT_URL>` placeholders with the real URLs and finalize **Known limitations** with the measured cold start, the seed horizon and its refresh path, and the daily copilot cap. `AGENTS.md` — correct the deploy/cost section: Fly.io is **pay-as-you-go, kept ≈ $0 by scale-to-zero**, not "free tier"; record the region and VM size; record that a hard Google spend cap plus an in-app daily cap are the spend controls. `agent/README.md` — document `CORS_ORIGIN` as comma-separated, `DAILY_REQUEST_CAP`, and the `Fly-Client-IP` rate-limit key. `web/README.md` — resolve the "Known contract gap (advisory for Fase E)" note now that Todo 8 fixed it. `specs/002-implementation-plan.md` §Sesión E — mark it done and point at `specs/003`/`004`. Update the GitHub repo description with the live URL.
   - **Accept:** `grep -n "Fly" AGENTS.md | grep -ci "free"` → **`0`** (a single deterministic number — the blunt `grep "free tier" AGENTS.md` would always match the legitimate and still-true *Neon* free-tier line, so it can never pass or fail meaningfully; positive control: `grep -c "Fly" AGENTS.md` → ≥ 1, proving the file is being read) · `grep -c "advisory for Fase E" web/README.md` → `0` (positive control: `grep -c "priceFrom" web/README.md` → ≥ 1) · no placeholder remains anywhere: `grep -rn "<WEB_URL>\|<AGENT_URL>" README.md AGENTS.md web/README.md agent/README.md specs/` → nothing (positive control: the same `grep -rn "CinePaís"` over those paths returns many hits).
