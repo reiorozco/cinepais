@@ -1,0 +1,8 @@
+# SSE fixtures are captured wire bytes, and their CRLF line endings ARE the thing
+# under test: web/tests/agent-events.test.ts asserts "the fixture is CRLF-terminated,
+# as a real SSE stream is", per the SSE spec. Git's end-of-line normalization would
+# rewrite those CRLFs to LF on commit — silently, and only for contributors whose
+# core.autocrlf is `input` or `true` — leaving a fixture that no longer represents
+# the wire format it exists to represent. Mark them as not-text so Git stores and
+# checks them out byte for byte.
+web/tests/fixtures/agent-sse/*.txt -text
