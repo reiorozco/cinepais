@@ -1,6 +1,6 @@
 # CinePaís — web
 
-Mock cinema-ticketing read API + placeholder UI. Portfolio project. Next.js 16 + Prisma 7 + Neon Postgres.
+Mock cinema-ticketing read API + UI. Portfolio project. Next.js 16 + Prisma 7 + Neon Postgres.
 
 ## Prerequisites
 
@@ -91,7 +91,7 @@ curl http://localhost:3000/api/films
   {
     "id": "film-01",
     "title": "La Odisea",
-    "posterUrl": "https://placehold.co/300x450?text=Film+01",
+    "posterUrl": "/posters/film-01.svg",
     "durationMin": 165,
     "rating": "PG-13",
     "genres": ["Aventura", "Drama"],
@@ -114,7 +114,7 @@ curl http://localhost:3000/api/films/film-01
 {
   "id": "film-01",
   "title": "La Odisea",
-  "posterUrl": "https://placehold.co/300x450?text=Film+01",
+  "posterUrl": "/posters/film-01.svg",
   "durationMin": 165,
   "rating": "PG-13",
   "genres": ["Aventura", "Drama"],
@@ -208,6 +208,20 @@ curl http://localhost:3000/api/showtimes/st-site-bog-3-imax-4-2245/seats
 - **Orphan rule** (`src/lib/business/orphan.ts`): selecting seats must not leave exactly 1 available seat isolated between sold/aisle/edge on both sides.
 - **Cutoff rule** (`src/lib/business/cutoff.ts`): showtimes starting within 15 minutes of `now` are excluded from `/api/showtimes`.
 - **Quality rule** (`prisma/seed.ts` `getSeatMeta()`): rows 1–3 = `low`, rows 4–8 = `optimal`, rows 9+ = `high` — fixed cutoffs, same for every room size.
+
+## Posters
+
+Every `posterUrl` points at a generated SVG committed under `public/posters/<film.id>.svg` — there is no
+external image host. Each poster is a deterministic typographic design (`scripts/generate-posters.ts`):
+a per-film colour field keyed off the film's genre, the typeset title, and a genre/runtime caption, with
+no `Date`, `Math.random`, or locale-sensitive formatting anywhere in the generator, so two runs against
+the same seed produce byte-identical files.
+
+To regenerate the set:
+
+```bash
+npx tsx scripts/generate-posters.ts
+```
 
 ## Copiloto (Fase D)
 

@@ -359,14 +359,14 @@ crossed anyway, F1 must report it as a deviation rather than absorb it.
   - **Rollback:** `cd web && vercel rollback` to the previous READY deployment, then report.
   - **Evidence:** `task-14-…png` ×6 (five consumers + mobile) + `task-14-…txt`.
 
-- [ ] 15. Make the documentation and the demo script tell the truth
+- [x] 15. Make the documentation and the demo script tell the truth
   - **Do:** re-read each file, then update: `web/README.md` — the `GET /api/films` and `GET /api/films/:id` examples at **lines 94 and 117**, which still show `https://placehold.co/300x450?text=Film+01`; add a short subsection describing the generated posters and how to regenerate them (`web/scripts/generate-posters.ts`). Root `README.md` — mention the generated art in the "What's inside" section, and **remove any claim that implies external image hosting**. `agent/docs/sse-contract.md` — check whether `posterUrl` appears; if it does not, change nothing there (verified: it does not, so this is a confirm-and-record step, not an edit).
     Finally, update `specs/003-demo-script.md` so the walkthrough reflects real posters and a working `/films` with three live tabs.
   - **Accept:** `grep -rn "placehold" README.md web/README.md agent/README.md specs/` → **nothing** (positive control: `grep -c "posterUrl" web/README.md` → ≥ 2) · `grep -c "posters" web/README.md` → ≥ 1 · `grep -rn "<WEB_URL>\|<AGENT_URL>" README.md specs/` → nothing.
   - **QA:** for each edited file, quote in the evidence the line that made the stale claim and the line replacing it — do not paraphrase. Then **execute every command in the READMEs' local-run and regeneration sections verbatim** and record the exit codes; an instruction that does not run is a FAIL.
   - **Evidence:** `task-15-…txt`.
 
-- [ ] 16. **Wave 2 close + phase handoff — HARD GATE**
+- [x] 16. **Wave 2 close + phase handoff — HARD GATE**
   - **🔴 Step 0:** confirm no stray environment override is in play — `env | grep -c DATABASE_URL_UNPOOLED` → **`0`** and `test -f web/.env.production.local` → **false**. Fase F's O-B5 was a production wipe caused by exactly such a leftover export surviving into a gate that runs `pnpm test`.
   - **Do:** run **the standard gate** in order, including **`bash web/scripts/reseed.sh` after `pnpm test`** and a **non-empty catalogue check against the deployed URL** before `pnpm build`. Commit, push `main`, then write `.omo/handoff-fase-g-final.md`: what shipped, every measurement (poster file sizes, which films landed in which tab, timings), every deviation, and the literal next step.
   - **Commit:** `docs: poster generation, catalogue tabs, and the refreshed demo script`
