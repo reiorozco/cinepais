@@ -1,6 +1,7 @@
 import { describe, test, expect } from "vitest";
 import {
   CitySchema,
+  FilmStatusSchema,
   FilmSummarySchema,
   FilmDetailSchema,
   ShowtimeSchema,
@@ -23,6 +24,7 @@ describe("Zod schemas parse README examples", () => {
       durationMin: 165,
       rating: "PG-13",
       genres: ["Aventura", "Drama"],
+      status: "cartelera",
     };
     expect(() => FilmSummarySchema.parse(example)).not.toThrow();
   });
@@ -35,6 +37,7 @@ describe("Zod schemas parse README examples", () => {
       durationMin: 165,
       rating: "PG-13",
       genres: ["Aventura", "Drama"],
+      status: "cartelera",
       synopsis: "Un viaje épico por los siete mares en busca del hogar.",
       director: "Sofía Restrepo",
       cast: ["Carlos Vega", "María Ospina", "Andrés Cano"],
@@ -136,5 +139,49 @@ describe("Zod schemas parse README examples", () => {
       },
     };
     expect(() => ShowtimeSeatsResponseSchema.parse(example)).not.toThrow();
+  });
+});
+
+describe("FilmStatusSchema guards the film status enum", () => {
+  const filmWithoutStatus = {
+    id: "film-01",
+    title: "La Odisea",
+    posterUrl: "https://placehold.co/300x450?text=Film+01",
+    durationMin: 165,
+    rating: "PG-13",
+    genres: ["Aventura", "Drama"],
+  };
+
+  test("accepts every value of the FilmStatus enum", () => {
+    for (const status of FilmStatusSchema.options) {
+      expect(FilmSummarySchema.safeParse({ ...filmWithoutStatus, status }).success).toBe(true);
+    }
+  });
+
+  test("rejects an unknown status instead of letting it through", () => {
+    const result = FilmSummarySchema.safeParse({ ...filmWithoutStatus, status: "estreno" });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0].path).toEqual(["status"]);
+    }
+  });
+
+  test("rejects a missing status, so the projection cannot silently drop it", () => {
+    expect(FilmSummarySchema.safeParse(filmWithoutStatus).success).toBe(false);
+  });
+
+  test("FilmDetailSchema inherits the same status validation", () => {
+    const detailWithoutStatus = {
+      ...filmWithoutStatus,
+      synopsis: "Un viaje épico por los siete mares en busca del hogar.",
+      director: "Sofía Restrepo",
+      cast: ["Carlos Vega", "María Ospina", "Andrés Cano"],
+    };
+    expect(FilmDetailSchema.safeParse({ ...detailWithoutStatus, status: "preventa" }).success).toBe(
+      true
+    );
+    expect(FilmDetailSchema.safeParse({ ...detailWithoutStatus, status: "Cartelera" }).success).toBe(
+      false
+    );
   });
 });

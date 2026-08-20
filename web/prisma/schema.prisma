@@ -34,6 +34,12 @@ enum QualityTier {
   high
 }
 
+enum FilmStatus {
+  cartelera
+  pronto
+  preventa
+}
+
 model Site {
   id        String       @id
   name      String
@@ -64,6 +70,7 @@ model Film {
   director    String
   cast        Json
   genres      Json
+  status      FilmStatus @default(cartelera)
   showtimes   Showtime[]
 }
 

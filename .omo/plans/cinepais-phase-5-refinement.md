@@ -331,7 +331,7 @@ crossed anyway, F1 must report it as a deviation rather than absorb it.
   - **QA:** (happy) a unit test posting `{message, sessionId, city:"Medellín"}` parses with `city == "Medellín"`; (backwards compatibility) a request **without** `city` still parses and behaves exactly as before — this matters because the deployed web app will not send it until Wave 3; (failure) an over-long or unknown city value is rejected or ignored, never forwarded raw.
   - **Evidence:** `task-5-…txt` with test names and the empty `mcp_widening.py` diff.
 
-- [ ] 6. **Wave 1 close — HARD GATE. Do not start Todo 7 in this session.**
+- [x] 6. **Wave 1 close — HARD GATE. Do not start Todo 7 in this session.**
   - **Do:** run **the standard gate** (§The fourth rule) in order, never overlapping — (a) agent trio, (b) `pnpm lint`, (c) `npx tsc --noEmit`, (d) detached `pnpm test`, **(e) `bash web/scripts/reseed.sh`**, (f) non-empty catalogue check, (g) `pnpm build`. Write `.omo/handoff-fase-f-wave-1.md` and **stage it into this commit**.
   - **🔴 Step (e) is not optional and this todo is where the phase first kills the live demo.** Wave 1 changes no web code, so it is tempting to treat `pnpm test` as harmless — it is not: it re-seeds the shared database three times with a hardcoded past date and leaves `GET /api/showtimes` returning `[]`. Re-seed, then verify, then build.
   - **Commit:** `fix(agent): recommend centred seats, constrain response formatting, accept the user's city`
@@ -342,7 +342,7 @@ crossed anyway, F1 must report it as a deviation rather than absorb it.
 
 ### Wave 2 — Data layer: film status, realistic occupancy, scenario integrity (⚠️ TOUCHES THE LIVE DATABASE — there is no local one; see §The fourth rule)
 
-- [ ] 7. Open Wave 2 and prepare the local environment
+- [x] 7. Open Wave 2 and prepare the local environment
   - **Do:** assert `test -f .omo/evidence/wave-1-closed-cinepais-phase-5-refinement.txt` — STOP if absent. Start the dev server in the background and **poll until it serves**, before any curl:
     ```bash
     mkdir -p /tmp/omo-p5
@@ -359,7 +359,7 @@ crossed anyway, F1 must report it as a deviation rather than absorb it.
   - **QA:** (failure) distinguish a connection refusal (server down → restart it) from `[]` (stale seed → re-seed). They are different problems with different fixes.
   - **Evidence:** `task-7-…txt`.
 
-- [ ] 8. `web/prisma/schema.prisma` + migration: add `Film.status` (D4)
+- [x] 8. `web/prisma/schema.prisma` + migration: add `Film.status` (D4)
   - **🔴 TWO THINGS THE PLAN ORIGINALLY GOT WRONG HERE. Read both before touching the schema.**
     1. **`prisma migrate dev` is BANNED (§The fourth rule item 5).** There is no local database — it would target the live one, it needs a shadow database, and on drift it offers to **reset**, i.e. drop the demo. It also auto-runs the seed afterwards. Use `--create-only` to author the SQL, review it, then apply with `migrate deploy`.
     2. **The column MUST carry a default.** Postgres cannot add a `NOT NULL` column with no default to a populated table, and `Film` is populated. Without `@default(cartelera)` the migration fails outright — or, if it were ever generated against an empty database, it would emit bare `NOT NULL` and fail later against real rows. Todo 8's original QA only asked the executor to *"confirm"* a default exists; it must be **written**.
@@ -376,7 +376,7 @@ crossed anyway, F1 must report it as a deviation rather than absorb it.
   - **QA:** (happy) the generated SQL is quoted verbatim in the evidence and shown to be additive with a default; (failure) confirm the migration does **not** drop or rename any existing column — `grep -ciE 'DROP|RENAME' <migration.sql>` → `0` (positive control: `grep -ci 'ALTER TABLE' <migration.sql>` → ≥ 1); (**the live check**) immediately after `migrate deploy`, `curl -s "http://localhost:3000/api/films" | head -c 200` still returns films — the additive migration must not have disturbed the running site.
   - **Evidence:** `task-8-…txt` with the migration SQL verbatim.
 
-- [ ] 9. `web/prisma/seed.ts`: assign a real status to every film, retiring the id-suffix hack
+- [x] 9. `web/prisma/seed.ts`: assign a real status to every film, retiring the id-suffix hack
   - **Why:** `film-card.tsx:78-83` derives the badge from `id.slice(-2)`. That hack is the reason the badge and the tab disagree.
   - **Do:** assign `status` per film from a **fixed lookup table keyed by film id** — most `cartelera`, a few `pronto`, a couple `preventa`.
     **🔴 Use a fixed table, NOT the PRNG.** `rand` is shared by `pickFourSlots()` and the film draw (`seed.ts:417-422`); **one extra `rand()` call shifts every downstream showtime→film assignment** and silently changes the whole schedule. A table consumes no randomness.
@@ -388,7 +388,7 @@ crossed anyway, F1 must report it as a deviation rather than absorb it.
   - **QA:** (happy) two consecutive seeds with the same `SEED` produce identical statuses; (failure) confirm no film ends up with a null/absent status; (**coherence — the point of the todo**) assert no `pronto` film has any showtime, and every `preventa` film's showtimes fall inside the last two days of the window; (**regression**) `film-01` and `film-02` are both `cartelera`.
   - **Evidence:** `task-9-…txt`.
 
-- [ ] 10. `web/prisma/seed.ts`: timeslot-varied occupancy, and fix the scenario slot anchor (D3 + F6.1)
+- [x] 10. `web/prisma/seed.ts`: timeslot-varied occupancy, and fix the scenario slot anchor (D3 + F6.1)
   - **Why:** `computeSeatStatus()` returns `Available` for **every** seat when no scenario applies, and only **4 of 672** showtimes carry a scenario ⇒ **99.4% of rooms are completely empty** (verified in production: `st-site-med-3-imax-0-1930` → 260/260). Separately, `scenarioFor()` keys on `slotIdx`, an index into the array **after** `pickFourSlots()` drops one of five slots off the shared PRNG — so a planted scenario lands on whichever time occupies that index, and drifts with the seed.
   - **Do:** (a) give normal showtimes an occupancy that depends on **time of day and day of week** — weeknight late shows sparse (~10% sold), Friday/Saturday prime time busy (~70%), everything else in between. Sold seats must cluster the way a real room fills (centre and mid-rows first), not scatter uniformly — this is what makes the centring fix visible and the demo believable. All of it driven by the seeded PRNG so the same `SEED` reproduces the same database. (b) Re-key `scenarioFor()` off the fragile slot index — **but the naive fix silently deletes scenarios, so read this before writing it.**
 
@@ -404,13 +404,13 @@ crossed anyway, F1 must report it as a deviation rather than absorb it.
   - **⚠️ Timing:** this runs a full re-seed. §Three rules item 3 is binding — one attempt, 15-minute ceiling, diagnostic ladder, **never blind retries**.
   - **Evidence:** `task-10-…txt` with both determinism runs and the occupancy spread table.
 
-- [ ] 11. `web/src/app/api/films/route.ts` (+ the film detail route and Zod schemas): expose `status`
+- [x] 11. `web/src/app/api/films/route.ts` (+ the film detail route and Zod schemas): expose `status`
   - **Do:** add `status` to the films list and detail responses and to their Zod schemas, following the existing validation conventions.
   - **Accept:** `curl -s "http://localhost:3000/api/films" | head -c 400` includes `"status"` · `npx tsc --noEmit` and `pnpm lint` exit 0 · existing API tests still pass.
   - **QA:** (happy) every film in the response carries a status from the enum; (failure) an invalid status value fails Zod parsing rather than leaking through — prove with a unit test.
   - **Evidence:** `task-11-…txt` with the API response excerpt.
 
-- [ ] 12. Recalibrate the four planted scenarios against the new baseline (F6.2)
+- [x] 12. Recalibrate the four planted scenarios against the new baseline (F6.2)
   - **Why:** the scenarios were designed when every other room was empty. The `optimal` scenario's own comment says "rows 4–8 kept wide open (10% sold), rest ~40%" — once normal showtimes carry real occupancy, **`optimal` stops standing out**, and `no-adjacent`'s checkerboard may no longer be the only room without adjacent pairs.
   - **Do:** re-read each of the four branches in `computeSeatStatus()` and adjust so each remains **unambiguously distinguishable** from a normal showtime of the same slot: `soldout` fully sold; `front-only` availability confined to the low-tier front rows; `optimal` markedly more open in the optimal band than any normal showtime; `no-adjacent` genuinely offering no adjacent pair anywhere.
   - **Accept — one machine check per scenario, ids resolved at runtime (never hardcoded):** `soldout` → `summary.availableCount == 0`; `front-only` → every available seat has `qualityTier == "low"`; `optimal` → its optimal-band availability ratio exceeds that of a normal showtime in the same slot, quoted side by side; `no-adjacent` → no two available seats are adjacent within any block.
@@ -418,14 +418,14 @@ crossed anyway, F1 must report it as a deviation rather than absorb it.
   - **🔴 The negative-control sample must include the hardest case:** a **busy prime-time showtime in a small room (Premium 9×10, and 2D)** — not just a quiet IMAX one. Those are where a high sold fraction can accidentally reproduce `front-only` (all non-`low` seats gone) or `no-adjacent` (no adjacent pair left). If a negative control passes when it should fail, the occupancy generator has swallowed a scenario: go back to Todo 10 and tighten the cap rather than weakening the scenario check.
   - **Evidence:** `task-12-…txt` with all eight results (four scenarios + four negative controls), naming the room type and slot of every showtime sampled.
 
-- [ ] 13. Update the determinism and pricing tests to the new data shape
+- [x] 13. Update the determinism and pricing tests to the new data shape
   - **Do:** update `web/tests/seed-determinism.test.ts` and any test asserting seat availability or film shape. **Update expectations; never delete a test to make it pass.** If a test becomes genuinely obsolete, say so explicitly in the evidence with the reason.
   - **Accept:** detached `pnpm test` exits 0 with no test skipped or removed — compare the test count against the Fase E baseline — **136 tests across 11 files** (`.omo/handoff-fase-e-final.md:331`; an earlier draft of this plan said 131, which was Fase D's number and is stale). Record the current count first, then explain any decrease. **Two decreases are expected and legitimate** — the proportional-rule assertions retired in Todo 26, and any determinism expectation genuinely invalidated by Todo 10's re-keying — and each must be named with its reason, never absorbed silently.
   - **⚠️ Named coupling, so it is not discovered at gate time:** `seed-determinism.test.ts:101-105` finds the `front-only` showtime **positionally** — `startsWith("st-site-med-2-imax-1-")`, `orderBy id asc`, `skip: 1`. Todo 10(b)'s re-key invalidates that lookup. Rewrite it to select by the intended time, not by position.
   - **QA:** (happy) the suite passes; (failure) confirm `seed-determinism.test.ts` still performs real re-seeds rather than being weakened into a no-op — quote the assertions.
   - **Evidence:** `task-13-…txt` with before/after test counts.
 
-- [ ] 14. **Wave 2 close — HARD GATE. Do not start Todo 15 in this session.**
+- [x] 14. **Wave 2 close — HARD GATE. Do not start Todo 15 in this session.**
   - **Do:** **the standard gate** in order — agent trio → `pnpm lint` → `tsc` → detached `pnpm test` → **`bash web/scripts/reseed.sh`** → non-empty catalogue check → `pnpm build`. Write `.omo/handoff-fase-f-wave-2.md` and **stage it into this commit**.
   - **🔴 The re-seed at step (e) is mandatory and doubly load-bearing here:** this wave *changed the seed itself*, so step (e) is both the demo's restoration and the first end-to-end proof that the new occupancy and status logic survives a full clean run against real data.
   - **Commit:** `feat(web): film status, realistic seeded occupancy, and scenario integrity`

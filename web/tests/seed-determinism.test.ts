@@ -14,6 +14,25 @@ function makeClient() {
   return new PrismaClient({ adapter });
 }
 
+/**
+ * DO NOT replace these literals with a query. Both scenarios used to be found
+ * indirectly and both resolved to the wrong row: the front-only lookup
+ * (`orderBy id asc, skip: 1`) landed on the NORMAL showtime
+ * st-site-med-2-imax-1-1930, which satisfies every front-only assertion — the
+ * suite passed while testing nothing. The title lookup matches 3 showtimes and
+ * survives only on `orderBy businessDate asc` ordering luck.
+ *
+ * Ids are `st-${siteId}-${roomName}-${dayIndex}-${HHmm}` over SCENARIO_ANCHORS,
+ * so they hold across SEED_NOW — but the weekday a day-index lands on does not.
+ * Never assert a weekday here.
+ */
+const SCENARIO_IDS = {
+  soldout: "st-site-med-1-imax-0-1930",
+  frontOnly: "st-site-med-2-imax-1-2100",
+  optimal: "st-site-med-2-imax-2-1700",
+  noAdjacent: "st-site-bog-1-2d-1-3-2100",
+} as const;
+
 describe("seed determinism", () => {
   test(
     "seed is deterministic — same counts on two runs",
@@ -79,40 +98,60 @@ describe("seed determinism", () => {
       await main({ SEED: "20260801", SEED_NOW: "2026-08-01" });
       const prisma = makeClient();
 
-      // scenario-soldout: find the soldout showtime and verify all seats are Sold
-      const soldoutShowtime = await prisma.showtime.findFirst({
-        where: {
-          siteId: "site-med-1",
-          room: "imax",
-          film: { title: "Sombras del Puente" },
-        },
-        orderBy: { businessDate: "asc" },
-      });
-      expect(soldoutShowtime).not.toBeNull();
-      if (soldoutShowtime) {
-        const availableSeats = await prisma.seat.count({
-          where: { showtimeId: soldoutShowtime.id, status: "Available" },
-        });
-        expect(availableSeats).toBe(0);
+      // Every scenario must EXIST. A missing row fails here rather than
+      // skipping its assertions, which is how the old `if (showtime)` guard
+      // turned an absent scenario into a pass.
+      for (const id of Object.values(SCENARIO_IDS)) {
+        expect(await prisma.showtime.findUnique({ where: { id } })).not.toBeNull();
       }
 
-      // scenario-front-only: ID encodes day 1 directly; second slot (slotIdx=1)
-      // IDs: st-site-med-2-imax-1-{HHmm} — ordering by id asc = chronological order
-      const frontOnlyShowtime = await prisma.showtime.findFirst({
-        where: { id: { startsWith: "st-site-med-2-imax-1-" } },
-        orderBy: { id: "asc" },
-        skip: 1, // slotIdx=1 = the front-only scenario
+      const countSeats = (id: string, where: Record<string, unknown> = {}) =>
+        prisma.seat.count({ where: { showtimeId: id, ...where } });
+
+      expect(await countSeats(SCENARIO_IDS.soldout)).toBe(260);
+      expect(await countSeats(SCENARIO_IDS.soldout, { status: "Available" })).toBe(0);
+
+      // The first two front-only assertions are the original ones, kept — but
+      // they are TRUE OF A NORMAL SHOWTIME TOO (the row this test used to land
+      // on scored 31 and 174). The three after them are what discriminate.
+      expect(
+        await countSeats(SCENARIO_IDS.frontOnly, { row: { lte: 2 }, status: "Available" })
+      ).toBeGreaterThan(0);
+      expect(
+        await countSeats(SCENARIO_IDS.frontOnly, { row: { gte: 3 }, status: "Sold" })
+      ).toBeGreaterThan(0);
+      expect(await countSeats(SCENARIO_IDS.frontOnly, { status: "Available" })).toBe(40);
+      expect(
+        await countSeats(SCENARIO_IDS.frontOnly, { row: { gte: 3 }, status: "Available" })
+      ).toBe(0);
+      expect(
+        await countSeats(SCENARIO_IDS.frontOnly, {
+          status: "Available",
+          qualityTier: { not: "low" },
+        })
+      ).toBe(0);
+
+      // optimal: the whole optimal band free. Asserted as the band, not as a
+      // total: the band is unconditional in the seed and so holds for any
+      // SEED/SEED_NOW, while the total (191/260 here) comes from per-seat PRNG
+      // draws in the outer rows and moves with the occupancy weekday bands.
+      expect(await countSeats(SCENARIO_IDS.optimal, { qualityTier: "optimal" })).toBe(100);
+      expect(
+        await countSeats(SCENARIO_IDS.optimal, { qualityTier: "optimal", status: "Available" })
+      ).toBe(100);
+
+      const noAdjacentAvailable = await prisma.seat.findMany({
+        where: { showtimeId: SCENARIO_IDS.noAdjacent, status: "Available" },
+        select: { area: true, row: true, col: true },
       });
-      if (frontOnlyShowtime) {
-        const frontRowAvailable = await prisma.seat.count({
-          where: { showtimeId: frontOnlyShowtime.id, row: { lte: 2 }, status: "Available" },
-        });
-        expect(frontRowAvailable).toBeGreaterThan(0);
-        const backRowSold = await prisma.seat.count({
-          where: { showtimeId: frontOnlyShowtime.id, row: { gte: 3 }, status: "Sold" },
-        });
-        expect(backRowSold).toBeGreaterThan(0);
-      }
+      // The count guards a vacuous truth: "no two are adjacent" holds for free
+      // on an empty set, so a fully-sold room would satisfy the scan below.
+      expect(noAdjacentAvailable.length).toBe(96);
+      const occupied = new Set(noAdjacentAvailable.map((s) => `${s.area}_${s.row}_${s.col}`));
+      const adjacentPairs = noAdjacentAvailable.filter((s) =>
+        occupied.has(`${s.area}_${s.row}_${s.col + 1}`)
+      );
+      expect(adjacentPairs).toEqual([]);
 
       await prisma.$disconnect();
     }

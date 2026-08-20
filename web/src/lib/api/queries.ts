@@ -39,6 +39,7 @@ export async function getFilms(city?: string) {
       durationMin: f.durationMin,
       rating: f.rating,
       genres: z.array(z.string()).parse(f.genres),
+      status: f.status,
     }))
   );
 }
@@ -53,6 +54,7 @@ export async function getFilmDetail(id: string) {
     durationMin: film.durationMin,
     rating: film.rating,
     genres: z.array(z.string()).parse(film.genres),
+    status: film.status,
     synopsis: film.synopsis,
     director: film.director,
     cast: z.array(z.string()).parse(film.cast),

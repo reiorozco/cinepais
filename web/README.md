@@ -94,10 +94,13 @@ curl http://localhost:3000/api/films
     "posterUrl": "https://placehold.co/300x450?text=Film+01",
     "durationMin": 165,
     "rating": "PG-13",
-    "genres": ["Aventura", "Drama"]
+    "genres": ["Aventura", "Drama"],
+    "status": "cartelera"
   }
 ]
 ```
+
+`status` is one of `cartelera` (showing now) · `pronto` (no showtimes yet) · `preventa` (showtimes only in the last 2 days of the window).
 
 ### GET /api/films/:id
 
@@ -115,6 +118,7 @@ curl http://localhost:3000/api/films/film-01
   "durationMin": 165,
   "rating": "PG-13",
   "genres": ["Aventura", "Drama"],
+  "status": "cartelera",
   "synopsis": "Un viaje épico por los siete mares en busca del hogar.",
   "director": "Sofía Restrepo",
   "cast": ["Carlos Vega", "María Ospina", "Andrés Cano"]

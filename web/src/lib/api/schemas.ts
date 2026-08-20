@@ -14,6 +14,8 @@ export const FormatSchema = z.enum([
   "Premium",
 ]);
 
+export const FilmStatusSchema = z.enum(["cartelera", "pronto", "preventa"]);
+
 export const FilmSummarySchema = z.object({
   id: z.string(),
   title: z.string(),
@@ -21,6 +23,7 @@ export const FilmSummarySchema = z.object({
   durationMin: z.number().int(),
   rating: z.string(),
   genres: z.array(z.string()),
+  status: FilmStatusSchema,
 });
 
 export const FilmDetailSchema = FilmSummarySchema.extend({
