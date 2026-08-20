@@ -342,7 +342,7 @@ crossed anyway, F1 must report it as a deviation rather than absorb it.
   - **Accept:** `git log --oneline origin/main..main | wc -l` → `0` · the curation check returned `0` · `git ls-files web/public/posters/ | wc -l` → `10` on `main`.
   - **Evidence:** `task-12-…txt`.
 
-- [ ] 13. Re-seed production so `posterUrl` points at the committed art
+- [x] 13. Re-seed production so `posterUrl` points at the committed art
   - **⚠️ This is the riskiest operation in the phase.** `web/prisma/seed.ts:349-356` **deletes** the whole catalogue before reinserting across ~24 unbatched `createMany` calls with **no transaction**. A run killed halfway leaves production **empty, not stale**. This is the operation that stalled at ~seat 110,000 in Fase E.
   - **Do:** announce to the user before running. Run `bash web/scripts/reseed.sh` **once**, timed, with nothing else touching the database. Because there is one database (§The fourth rule), no environment juggling is needed — `.env.local` already points at production. **Do not** create `.env.production.local`; Fase F had to delete it precisely because `next build` loads it at highest precedence.
   - **§Three rules item 3 is binding:** if it exceeds 15 minutes, **STOP and walk the diagnostic ladder — do not relaunch.** Healthy baseline ≈ 73 s. **`reseed.sh:131`'s own failure message tells you to re-run it — ignore that message.**
