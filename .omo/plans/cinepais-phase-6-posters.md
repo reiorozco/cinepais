@@ -351,7 +351,7 @@ crossed anyway, F1 must report it as a deviation rather than absorb it.
   - **QA (happy):** confirm the showtime count and window match what the script reports, and that occupancy is still varied — this phase must not have disturbed Fase F's occupancy work.
   - **Evidence:** `task-13-…txt` with the timing and the API excerpt.
 
-- [ ] 14. Redeploy and prove the posters actually render in production
+- [x] 14. Redeploy and prove the posters actually render in production
   - **Do:** trigger a production Vercel deployment from `main`. The agent is **not** redeployed — no agent source changed (Todo 10 asserted an empty `agent/src/` diff), so `fly deploy` is out of scope. Confirm the agent is still healthy anyway.
   - **Accept:** the Vercel deployment is READY and the build log shows `prisma generate` (positive control: it also shows `next build`) · `curl -s -o /dev/null -w '%{http_code}' https://cinepais.vercel.app` → `200` · `curl -s -o /dev/null -w '%{http_code}' https://cinepais.vercel.app/posters/film-01.svg` → `200` · `curl -s https://cinepais-agent.fly.dev/health` → `{"status":"ok"}`.
   - **🔴 QA — a 200 is not a rendered image.** Open the deployed site in a browser and screenshot: the home grid, `/films` with all three tabs, a film detail page (both the blurred backdrop and the ficha poster), and a showtime page sidebar — **five distinct poster consumers, all five verified visually**. `next/image` + local SVG + `dangerouslyAllowSVG` is the combination §Risks item 5 flags; this is where it is proven or disproven. Capture at a **mobile viewport too** — that is how LinkedIn traffic arrives.
