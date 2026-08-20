@@ -321,7 +321,7 @@ crossed anyway, F1 must report it as a deviation rather than absorb it.
   - **QA:** (happy) `cd agent && uv run pytest tests/ -m "not evals" -q` exits 0; (failure) confirm no agent **source** file changed — an empty `git diff` on `agent/src/` is the proof.
   - **Evidence:** `task-10-…txt` with the empty `agent/src/` diff.
 
-- [ ] 11. **Wave 1 close — HARD GATE. Do not start Todo 12 in this session.**
+- [x] 11. **Wave 1 close — HARD GATE. Do not start Todo 12 in this session.**
   - **Do:** run **the standard gate** (§The fourth rule) in order, never overlapping — (a) agent trio, (b) `pnpm lint`, (c) `npx tsc --noEmit`, (d) detached `pnpm test`, **(e) `bash web/scripts/reseed.sh`**, (f) non-empty catalogue check, (g) `pnpm build`. Write `.omo/handoff-fase-g-wave-1.md` and **stage it into this commit**.
   - **🔴 Step (e) is not optional.** `pnpm test` re-seeds the shared live database three times with a past date and leaves `GET /api/showtimes` returning `[]`. Re-seed, verify, then build — building on a wiped catalogue prerenders an empty homepage into the output.
   - **Commit:** `feat(web): generated film posters and a status-driven catalogue`
