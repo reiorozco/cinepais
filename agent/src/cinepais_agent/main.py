@@ -126,6 +126,11 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONRe
 class ChatRequest(BaseModel):
     message: str
     sessionId: Annotated[str, Field(min_length=1, max_length=128)]
+    # Optional on purpose: the deployed web app does not send it yet, and Pydantic v2 would
+    # silently drop it if it were not declared here. Left unconstrained at this layer so a bad
+    # value degrades to city-less behaviour rather than a 422 — sse.sanitize_city is the gate
+    # that decides whether it ever reaches the prompt.
+    city: str | None = None
 
 
 @app.get("/health")
@@ -180,7 +185,7 @@ async def chat(request: Request, body: ChatRequest) -> EventSourceResponse:
     _daily_requests[day_key] = _daily_requests.get(day_key, 0) + 1
 
     return EventSourceResponse(
-        stream_agent(body.message, body.sessionId, _agent, _session_queries),
+        stream_agent(body.message, body.sessionId, _agent, _session_queries, body.city),
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
         ping=15,
     )

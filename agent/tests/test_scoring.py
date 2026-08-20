@@ -81,7 +81,7 @@ def make_imax_row(
 def test_recommend_best_basic():
     """Basic happy path: 2 adjacent seats found."""
     showtime = make_showtime()
-    # Row 5 in 13-row imax: 5/13=0.385 > 0.23 → optimal tier
+    # Row 5 is optimal tier: production cutoffs are rows 1-3 low, 4-8 optimal, 9+ high.
     seats = make_imax_row(5, range(1, 21))
     result = recommend_best([ShowtimeWithSeats(showtime=showtime, seats=seats)], n=2)
     assert result.outcome == "recommended"
@@ -124,8 +124,7 @@ def test_front_only_recommends_with_alternative():
     the low-tier showtime appears as an alternative with a Spanish reason.
     When two candidates exist, alternatives must be non-empty with Spanish reasons.
     """
-    # Showtime 1: only front rows (low tier) available
-    # In 13-row imax: rows 1-2 have pct=1/13=0.077, 2/13=0.154 both ≤ 0.23 → low
+    # Showtime 1: only front rows (low tier) available — rows 1-3 are low in production
     showtime1 = make_showtime(id="st-front", business_date="2026-08-08", time="20:00")
     seats1 = make_imax_row(1, range(1, 21), quality_tier="low")
     seats1 += make_imax_row(2, range(1, 21), quality_tier="low")

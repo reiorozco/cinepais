@@ -145,6 +145,53 @@ class SeatForAdjacency:
 
 
 # ---------------------------------------------------------------------------
+# Ranking helpers (centrality)
+# ---------------------------------------------------------------------------
+
+
+def _room_centre_col(layout_key: str) -> float:
+    """Horizontal centre of the whole room: ``(1 + cols) / 2``.
+
+    Columns are 1-based, so a room of `cols` columns is centred on the midpoint
+    between column 1 and column `cols`. Read from ROOM_LAYOUTS — never hardcoded,
+    since the three rooms differ: imax 20 cols → 10.5, 2d 15 cols → 8.0,
+    premium 10 cols → 5.5.
+
+    Deliberately the centre of the ROOM, not the centre of a seat block. Scoring
+    each group against its own block's centre would rank a pair hugging a side
+    wall above a pair inside the true centre block (imax row 6: cols 1-2 sit 1.5
+    from their block centre but 9.0 from the room centre, while cols 6-7 sit 4.0
+    from both) — which is the front/side-corner defect this ranking exists to fix.
+    """
+    layout = ROOM_LAYOUTS[layout_key]
+    cols: int = layout["cols"]  # type: ignore[assignment]
+    return (1 + cols) / 2
+
+
+def _band_centre_rows(seats: list[SeatForAdjacency]) -> dict[str, float]:
+    """Vertical centre of each quality band: ``(min_row + max_row) / 2`` per tier.
+
+    Bounds are derived from the rows actually present per `qualityTier` in the
+    given seats. Callers always pass EVERY seat of the showtime — sold and
+    available alike — so the bounds are a property of the room layout and do not
+    drift with occupancy. Deriving them from available seats only would move each
+    band's centre from one showtime to the next.
+
+    This is also why the bounds are read from the data rather than recomputed:
+    `qualityTier` is written by web/prisma/seed.ts `getSeatMeta()`, which uses
+    FIXED cutoffs regardless of room size (row ≤ 3 low, rows 4-8 optimal, row ≥ 9
+    high). The proportional `row_to_tier` rule above is not what produced these
+    values, and the "high" band is open-ended upwards, so its centre cannot be
+    derived from the cutoffs alone anyway.
+    """
+    bounds: dict[str, tuple[int, int]] = {}
+    for seat in seats:
+        min_row, max_row = bounds.get(seat.qualityTier, (seat.row, seat.row))
+        bounds[seat.qualityTier] = (min(min_row, seat.row), max(max_row, seat.row))
+    return {tier: (min_row + max_row) / 2 for tier, (min_row, max_row) in bounds.items()}
+
+
+# ---------------------------------------------------------------------------
 # Adjacent group finder
 # ---------------------------------------------------------------------------
 
@@ -160,8 +207,14 @@ def find_adjacent(
     Wheelchair/preferential seats are excluded from default groups.
     Groups are filtered to be orphan-safe.
 
-    Returns groups ordered by (tier_preference desc, row asc, col asc).
+    Returns groups ordered lexicographically by
+    (tier_preference desc, horizontal_distance asc, vertical_distance asc, row asc, col asc).
     - tier_preference: optimal=3, high=2, low=1
+    - horizontal_distance: |group midpoint col - room centre col| (see _room_centre_col)
+    - vertical_distance: |row - centre of the group's quality band| (see _band_centre_rows)
+
+    Horizontal dominates vertical because sitting in the wrong block is the worse
+    defect; (row, col) is the final tiebreak so the order stays reproducible.
     """
     layout_key = normalize_room(room)
     layout = ROOM_LAYOUTS[layout_key]
@@ -208,7 +261,27 @@ def find_adjacent(
 
                 groups.append(group)
 
-    def _sort_key(group: list[SeatForAdjacency]) -> tuple[int, int, int]:
-        return (-_TIER_PREF.get(group[0].qualityTier, 0), group[0].row, group[0].col)
+    room_centre_col = _room_centre_col(layout_key)
+    band_centre_rows = _band_centre_rows(seats)
+
+    def _sort_key(group: list[SeatForAdjacency]) -> tuple[int, float, float, int, int]:
+        row = group[0].row
+        first_col = group[0].col
+        last_col = group[-1].col
+        tier = group[0].qualityTier
+
+        # Midpoint of the run; lands between seats for even n (cols 10-11 → 10.5).
+        # Compared as floats — never rounded.
+        group_centre_col = (first_col + last_col) / 2
+        horizontal_distance = abs(group_centre_col - room_centre_col)
+        vertical_distance = abs(row - band_centre_rows.get(tier, float(row)))
+
+        return (
+            -_TIER_PREF.get(tier, 0),
+            horizontal_distance,
+            vertical_distance,
+            row,
+            first_col,
+        )
 
     return sorted(groups, key=_sort_key)

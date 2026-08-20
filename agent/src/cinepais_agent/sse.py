@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from collections.abc import AsyncGenerator, MutableMapping
 from typing import Any
 
@@ -11,10 +12,57 @@ from .events import ErrorEvent, RecommendationEvent, TokenEvent, ToolCallEvent
 
 logger = logging.getLogger(__name__)
 
+# Upper bound on the city name, checked *before* the regex so an oversized body never reaches it.
+MAX_CITY_CHARS = 64
+
+# Latin letters (`À-ÖØ-öø-ÿ` is the Latin-1 letter range minus × and ÷) separated by single
+# spaces — nothing else may be spliced into the prompt. Deliberately NOT `\s`, and `fullmatch`
+# rather than a `$` anchor: both admit a newline, and a newline inside the bracketed context line
+# lets a caller close it and append instructions of their own — the prompt-injection channel this
+# guard exists to close (OWASP LLM01).
+_CITY_PATTERN = re.compile(r"[A-Za-zÀ-ÖØ-öø-ÿ]+(?: [A-Za-zÀ-ÖØ-öø-ÿ]+)*")
+
+# The per-turn context line prefixed to the user message when the city is known and well-formed.
+CITY_CONTEXT_PREFIX = "[contexto: ciudad seleccionada = {city}]"
+
 
 def _matches_recommend_best(name: str) -> bool:
     """Match recommend_best, including namespaced forms like cinepais__recommend_best."""
     return name == "recommend_best" or name.endswith("__recommend_best")
+
+
+def sanitize_city(city: str | None) -> str | None:
+    """Return the city only when it is safe to splice into the prompt, else None.
+
+    Anything that fails is dropped silently — treated exactly as if the field had been absent —
+    so a malformed value degrades to the pre-existing city-less behaviour instead of erroring.
+
+    A well-formed but *unknown* city is intentionally allowed through: verifying it would cost a
+    live `/api/cities` call on every request, and an unknown name simply yields no showtimes,
+    which the widening ladder in `mcp_widening.py` already answers with "disponible en otra
+    ciudad". Unrecognised is a search outcome here, not a security problem.
+    """
+    if not city:
+        return None
+    candidate = city.strip()
+    if not candidate or len(candidate) > MAX_CITY_CHARS:
+        return None
+    if _CITY_PATTERN.fullmatch(candidate) is None:
+        return None
+    return candidate
+
+
+def build_user_content(message: str, city: str | None) -> str:
+    """Prefix the bracketed city-context line to the user turn when a valid city is known.
+
+    The city is carried per turn on the *user* message rather than through the system prompt:
+    `SYSTEM_PROMPT` is bound once into the agent at startup (`agent.py`) and shared by every
+    request, so there is no per-request prompt hook to template into.
+    """
+    safe_city = sanitize_city(city)
+    if safe_city is None:
+        return message
+    return f"{CITY_CONTEXT_PREFIX.format(city=safe_city)}\n{message}"
 
 
 async def error_stream(code: str, message: str) -> AsyncGenerator[dict[str, str], None]:
@@ -24,7 +72,11 @@ async def error_stream(code: str, message: str) -> AsyncGenerator[dict[str, str]
 
 
 async def stream_agent(
-    message: str, session_id: str, agent: Any, session_queries: MutableMapping[str, int]
+    message: str,
+    session_id: str,
+    agent: Any,
+    session_queries: MutableMapping[str, int],
+    city: str | None = None,
 ) -> AsyncGenerator[dict[str, str], None]:
     """Stream agent events as SSE."""
     if agent is None:
@@ -43,9 +95,11 @@ async def stream_agent(
     _emitted_recommendation = False
     _emitted_error = False
 
+    user_content = build_user_content(message, city)
+
     try:
         async for event in agent.astream_events(
-            {"messages": [{"role": "user", "content": message}]},
+            {"messages": [{"role": "user", "content": user_content}]},
             config={"configurable": {"thread_id": session_id}},
             version="v2",
         ):

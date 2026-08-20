@@ -815,10 +815,27 @@ Recorded because they show where paper review has a ceiling.
 | R3-2 | Wave 3, Todo 18 | **20 `.omo/notepads/` files were tracked on `main` across all five phases.** They are gitignored (`.gitignore:38`) as scratch state — the same category as `evidence/` and `run-continuation/` that the locked Q1 decision excludes — but the ignore rule **postdates** their first commit in `phase-0-scaffold`, so ignoring never untracked them. Todo 18's curation list named only two of the three directories | Curation list extended to `.omo/notepads/`; `main` rebuilt from scratch and re-verified per commit. **Neither Metis, Momus, Oracle nor the planner caught this** — every one of us reasoned from the *decision text* ("evidence + run-continuation") instead of enumerating what was actually tracked |
 | R3-3 | Wave 3, Todo 19 | The `FlyV1 fm2_` alternative had no token-body quantifier and matched the plan's own QA code block, producing a permanent false positive | Quantifier added (see above), with a standing rule that every pattern requires a body |
 
+| R3-4 | Phase close | **`.omo/handoff-fase-e-wave-3.md` was never written**, though §Wave boundaries item 4 requires one note per wave (waves 1, 2, 4, 5 and the final handoff all exist). **F1 approved anyway.** Verified by the planner post-hoc: the file exists neither locally nor in the published repo | Recorded as a deviation. Not retro-written — fabricating a contemporaneous record after the fact would be worse than the gap. Impact is low: Wave 3 is the most heavily evidenced work in the phase and `handoff-fase-e-final.md` covers it |
+
 **Standing lesson from R3-2:** when a decision is phrased as a category ("orchestrator scratch state
 does not ship"), the plan must **enumerate the members of that category from the repo**, not restate the
 category. `git ls-files .omo | sed 's|/[^/]*$||' | sort -u` would have listed all four directories in one
 command, and no reviewer ran it.
+
+**Standing lesson from R3-4 — and this is the phase's most transferable one, because it is the THIRD
+costume of the same failure.** A criterion is only as strong as **the place it is written**:
+
+| Occurrence | How the rule was written | Outcome |
+|---|---|---|
+| Fase D | "stop and continue in a fresh chat" — **prose** | Overridden at 2 of 3 wave boundaries |
+| R3-2 | "evidence + run-continuation don't ship" — **a category** | A fourth tracked directory (`notepads/`) was missed by 3 reviewers and the planner |
+| R3-4 | "every wave stages a handoff note" — **a global section** | One of six never written; F1 did not catch it |
+
+Executors and reviewers check **the todo they are standing on**. They do not re-read global sections,
+and they do not expand categories. Writing the rule once in a shared section was DRY, and DRY is the
+**wrong instinct for acceptance criteria**. Each of the six wave-close todos should have carried its own
+literal line: `git ls-files .omo/handoff-fase-e-wave-<N>.md` → `1`. Duplicate acceptance criteria into
+every todo that must satisfy them, even when it feels redundant — redundancy is the point.
 
 **Both reviewers independently confirmed as sound:** the single-stage `python:3.12-slim` Dockerfile
 (no `grpcio`/protobuf in `uv.lock`, 0 sdist-only packages across 81, lock in sync — it will build with
