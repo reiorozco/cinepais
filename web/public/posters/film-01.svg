@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 600 900">
+  <title>La Odisea</title>
+  <defs>
+    <linearGradient id="field" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#43230F"/>
+      <stop offset="0.55" stop-color="#28140A"/>
+      <stop offset="1" stop-color="#170B06"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#E8853A" stop-opacity="0.3"/>
+      <stop offset="1" stop-color="#E8853A" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="vignette" cx="0.5" cy="0.4" r="0.75">
+      <stop offset="0" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="0.6" stop-color="#000000" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.72"/>
+    </radialGradient>
+    <filter id="grain" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.92" numOctaves="3" seed="370" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+    </filter>
+  </defs>
+  <rect width="600" height="900" fill="url(#field)"/>
+  <circle cx="300" cy="316" r="270" fill="url(#glow)"/>
+  <g transform="rotate(-2 300 316)"><polygon points="300,182 442,452 158,452" fill="none" stroke="#E8853A" stroke-width="2.5" opacity="0.62"/><rect x="140" y="352" width="320" height="44" fill="#E8853A" opacity="0.13"/></g>
+  <rect width="600" height="900" fill="url(#vignette)"/>
+  <rect width="600" height="900" filter="url(#grain)" opacity="0.14"/>
+  <rect x="64" y="672.9" width="56" height="4" fill="#E8853A"/>
+  <text x="64" y="782" textLength="472" lengthAdjust="spacingAndGlyphs" fill="#FDF0E4" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="88.01" font-weight="700">LA ODISEA</text>
+  <text x="64" y="838" textLength="249.24" lengthAdjust="spacingAndGlyphs" fill="#C69A76" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="21" font-weight="400">AVENTURA · 165 MIN</text>
+</svg>
