@@ -20,8 +20,14 @@ type FilmGridClientProps = {
    * see Todo 6 / plan §Todo 9 for the "no `?city=` searchParam" rule.
    */
   filmCityMap: Record<string, string[]>;
-  /** Message displayed when the intersection is empty. */
-  emptyMessage: string;
+  /**
+   * Copy for the one way this grid empties: `films` arrived non-empty and
+   * the city filter removed every last one. The caller words it because only
+   * it knows the tab and whether a `?format=` is also to blame — guessing
+   * that cause here is what made the old single message wrong.
+   */
+  emptyTitle: string;
+  emptyDescription?: string;
 };
 
 // ---------------------------------------------------------------------------
@@ -40,23 +46,26 @@ type FilmGridClientProps = {
 export function FilmGridClient({
   films,
   filmCityMap,
-  emptyMessage,
+  emptyTitle,
+  emptyDescription,
 }: FilmGridClientProps) {
   const { city } = useCity();
 
   const visibleFilms = useMemo(() => {
     return films.filter((film) => {
       const cities = filmCityMap[film.id];
-      // No showtimes at all → the film is intentionally in the current
-      // list (e.g. no format filter) but we can't guarantee city presence.
-      // Drop it from the city-scoped view to keep the grid honest.
-      if (!cities || cities.length === 0) return false;
+      // No entry at all means zero showtimes anywhere — true by construction
+      // for every `pronto` title. That is an announcement, not a listing, so
+      // no city can claim or exclude it. (A film whose showtimes merely lost
+      // the `?format=` filter never reaches here; the server drops it from
+      // `films` first.) Narrowing these by city silently emptied Pronto.
+      if (!cities || cities.length === 0) return true;
       return cities.includes(city);
     });
   }, [films, filmCityMap, city]);
 
   if (visibleFilms.length === 0) {
-    return <EmptyState title={emptyMessage} />;
+    return <EmptyState title={emptyTitle} description={emptyDescription} />;
   }
 
   return (

@@ -17,7 +17,7 @@ FILMS_PAYLOAD = [
     {
         "id": "film-01",
         "title": "La Odisea",
-        "posterUrl": "https://placehold.co/300x450?text=Film+01",
+        "posterUrl": "/posters/film-01.svg",
         "durationMin": 165,
         "rating": "PG-13",
         "genres": ["Aventura", "Drama"],

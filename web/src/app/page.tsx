@@ -1,48 +1,9 @@
 import { getFilms } from "@/lib/api/queries";
 import { HeroCarousel } from "@/components/home/hero-carousel";
 import { FilmCard } from "@/components/films/film-card";
+import { FILM_TABS } from "@/components/films/film-tabs";
 import { EmptyState } from "@/components/ui-states/empty-state";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { Film } from "@/lib/api/schemas";
-
-type FilmTab = {
-  /** Catalogue status this tab shows. Also the tab's `value`. */
-  status: Film["status"];
-  label: string;
-  /** Copy for the genuine "this status has no films" case. */
-  emptyTitle: string;
-  emptyDescription: string;
-};
-
-/**
- * The three catalogue tabs, in display order. Each one is a pure projection of
- * `film.status` — the same field `FilmCard` derives its badge from, so a card
- * can never appear under a tab its badge contradicts, and no film can show up
- * under two tabs.
- */
-const FILM_TABS: readonly FilmTab[] = [
-  {
-    status: "cartelera",
-    label: "Cartelera",
-    emptyTitle: "Aún no hay funciones",
-    emptyDescription:
-      "Vuelve pronto o cambia de ciudad para ver la cartelera disponible.",
-  },
-  {
-    status: "pronto",
-    label: "Pronto",
-    emptyTitle: "Aún no hay próximos estrenos",
-    emptyDescription:
-      "Estamos preparando los estrenos que vienen. Vuelve pronto para verlos aquí.",
-  },
-  {
-    status: "preventa",
-    label: "Preventa",
-    emptyTitle: "Aún no hay preventas abiertas",
-    emptyDescription:
-      "Cuando abramos la venta anticipada de un estreno, aparecerá en esta pestaña.",
-  },
-];
 
 /**
  * Home / landing page.

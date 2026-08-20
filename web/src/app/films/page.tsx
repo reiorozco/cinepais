@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import { getFilms, getShowtimes } from "@/lib/api/queries";
 import { FilmGridClient } from "@/components/films/film-grid-client";
+import { FILM_TABS } from "@/components/films/film-tabs";
 import { FormatFilterDialog } from "@/components/films/format-filter-dialog";
 import { EmptyState } from "@/components/ui-states/empty-state";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -119,52 +120,70 @@ export default async function FilmsPage({ searchParams }: FilmsPageProps) {
             </div>
           </header>
 
-          <Tabs defaultValue="cartelera" className="gap-6">
+          {/* Triggers and panels both project the shared `FILM_TABS` — the same
+              config the home page renders. One list is what stops a card from
+              surfacing under a tab its `status` badge contradicts. */}
+          <Tabs defaultValue={FILM_TABS[0].status} className="gap-6">
             <TabsList
               variant="line"
               className="w-full justify-start border-b border-white/10 bg-transparent"
             >
-              <TabsTrigger
-                value="cartelera"
-                className="text-white/60 hover:text-white data-active:text-white"
-              >
-                Cartelera
-              </TabsTrigger>
-              <TabsTrigger
-                value="pronto"
-                className="text-white/60 hover:text-white data-active:text-white"
-              >
-                Pronto
-              </TabsTrigger>
-              <TabsTrigger
-                value="preventa"
-                className="text-white/60 hover:text-white data-active:text-white"
-              >
-                Preventa
-              </TabsTrigger>
+              {FILM_TABS.map((tab) => (
+                <TabsTrigger
+                  key={tab.status}
+                  value={tab.status}
+                  className="text-white/60 hover:text-white data-active:text-white"
+                >
+                  {tab.label}
+                </TabsTrigger>
+              ))}
             </TabsList>
 
-            <TabsContent value="cartelera" className="text-white">
-              <FilmGridClient
-                films={filteredFilms}
-                filmCityMap={filmCityMap}
-                emptyMessage="No hay funciones con esos filtros — prueba otro formato"
-              />
-            </TabsContent>
+            {FILM_TABS.map((tab) => {
+              // Partition AFTER the `?format=` narrowing, never before. A
+              // format therefore empties Pronto: a `pronto` film has no
+              // showtimes at all, so no format can match it. Correct, not a
+              // filter bug — do not "fix" it.
+              const tabFilms = filteredFilms.filter(
+                (film) => film.status === tab.status,
+              );
 
-            <TabsContent value="pronto">
-              <EmptyState
-                title="Próximamente — vuelve pronto"
-                description="Estamos preparando la próxima ola de estrenos."
-              />
-            </TabsContent>
+              // Reached only when this tab HAS films and the city filter
+              // inside the grid drops all of them. A `?format=` is then a
+              // second genuine cause, so name it; with no format applied it
+              // is not one, and blaming it would be plain false.
+              const cityEmpty = format
+                ? {
+                    title: `No hay funciones en ${format} en tu ciudad`,
+                    description: `Estas películas no tienen funciones en formato ${format} en la ciudad que elegiste. Prueba con otro formato o cambia de ciudad.`,
+                  }
+                : {
+                    title: tab.cityEmptyTitle,
+                    description: tab.cityEmptyDescription,
+                  };
 
-            <TabsContent value="preventa">
-              <EmptyState
-                title="Preventa en camino"
-                description="Aún no hay funciones abiertas en preventa. Suscríbete para enterarte primero."
-              />
-            </TabsContent>
+              return (
+                <TabsContent
+                  key={tab.status}
+                  value={tab.status}
+                  className="text-white"
+                >
+                  {tabFilms.length === 0 ? (
+                    <EmptyState
+                      title={tab.emptyTitle}
+                      description={tab.emptyDescription}
+                    />
+                  ) : (
+                    <FilmGridClient
+                      films={tabFilms}
+                      filmCityMap={filmCityMap}
+                      emptyTitle={cityEmpty.title}
+                      emptyDescription={cityEmpty.description}
+                    />
+                  )}
+                </TabsContent>
+              );
+            })}
           </Tabs>
         </div>
       </section>

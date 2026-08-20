@@ -56,7 +56,12 @@ const SITES = [
 
 const ALL_SLOTS = ["14:00", "17:00", "19:30", "21:00", "22:45"] as const;
 
-const FILMS: {
+/**
+ * One row of the film table. Named and exported so the poster generator
+ * (`web/scripts/generate-posters.ts`) reads the same titles and genres the
+ * database is seeded from, rather than keeping a second copy that could drift.
+ */
+export type FilmSeed = {
   id: string;
   title: string;
   synopsis: string;
@@ -65,7 +70,9 @@ const FILMS: {
   director: string;
   cast: string[];
   genres: string[];
-}[] = [
+};
+
+export const FILMS: FilmSeed[] = [
   {
     id: "film-01",
     title: "La Odisea",
@@ -168,10 +175,13 @@ const FILMS: {
   },
 ];
 
+/**
+ * Root-relative on purpose: `next/image` serves `public/` assets directly, so
+ * this needs no `images.remotePatterns` entry — and `next.config.ts` no longer
+ * has one. A remote URL here would fail to render until that allowlist returns.
+ */
 function posterUrlFor(id: string): string {
-  // id is "film-01".."film-10"; produce "Film+01" etc.
-  const num = id.replace("film-", "");
-  return `https://placehold.co/300x450?text=Film+${num}`;
+  return `/posters/${id}.svg`;
 }
 
 // ---------------------------------------------------------------------------

@@ -16,7 +16,7 @@ FILM_SUMMARY_PAYLOAD = [
     {
         "id": "film-01",
         "title": "La Odisea",
-        "posterUrl": "https://placehold.co/300x450?text=Film+01",
+        "posterUrl": "/posters/film-01.svg",
         "durationMin": 165,
         "rating": "PG-13",
         "genres": ["Aventura", "Drama"],
@@ -26,7 +26,7 @@ FILM_SUMMARY_PAYLOAD = [
 FILM_DETAIL_PAYLOAD = {
     "id": "film-01",
     "title": "La Odisea",
-    "posterUrl": "https://placehold.co/300x450?text=Film+01",
+    "posterUrl": "/posters/film-01.svg",
     "durationMin": 165,
     "rating": "PG-13",
     "genres": ["Aventura", "Drama"],

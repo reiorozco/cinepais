@@ -20,7 +20,7 @@ describe("Zod schemas parse README examples", () => {
     const example = {
       id: "film-01",
       title: "La Odisea",
-      posterUrl: "https://placehold.co/300x450?text=Film+01",
+      posterUrl: "/posters/film-01.svg",
       durationMin: 165,
       rating: "PG-13",
       genres: ["Aventura", "Drama"],
@@ -33,7 +33,7 @@ describe("Zod schemas parse README examples", () => {
     const example = {
       id: "film-01",
       title: "La Odisea",
-      posterUrl: "https://placehold.co/300x450?text=Film+01",
+      posterUrl: "/posters/film-01.svg",
       durationMin: 165,
       rating: "PG-13",
       genres: ["Aventura", "Drama"],
@@ -146,7 +146,7 @@ describe("FilmStatusSchema guards the film status enum", () => {
   const filmWithoutStatus = {
     id: "film-01",
     title: "La Odisea",
-    posterUrl: "https://placehold.co/300x450?text=Film+01",
+    posterUrl: "/posters/film-01.svg",
     durationMin: 165,
     rating: "PG-13",
     genres: ["Aventura", "Drama"],
