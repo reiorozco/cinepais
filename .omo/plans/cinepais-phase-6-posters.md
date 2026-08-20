@@ -332,7 +332,7 @@ crossed anyway, F1 must report it as a deviation rather than absorb it.
 
 ### Wave 2 — Ship: production data, deploy, live proof, and the docs
 
-- [ ] 12. Merge to `main` and push — in that order
+- [x] 12. Merge to `main` and push — in that order
   - **Precondition:** assert `test -f .omo/evidence/wave-1-closed-cinepais-phase-6-posters.txt` — STOP if absent.
   - **Do (step 1 — merge):** merge `phase-6-posters` into `main` (keep the branch as a local backup; never delete it).
   - **🔴 Accept (step 1) — verify the merge did not undo the publication curation, BEFORE anything irreversible:** `git log --oneline main -- '.omo/evidence/*' '.omo/run-continuation/*' '.omo/notepads/*' '.omo/start-work/*' '.omo/boulder.json' | wc -l` → **`0`** (positive control: `git log --oneline main -- '.omo/plans/*' | wc -l` → non-zero). Caught here it is free to fix; caught at Todo 16 it sits behind a destructive re-seed.
