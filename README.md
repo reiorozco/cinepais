@@ -51,11 +51,19 @@ Two halves that talk to each other over HTTP, deployed separately, and buildable
   selection may not strand a single available seat between sold seats, an aisle, or a wall); a **15-minute
   cutoff** that removes showtimes about to start; pricing by format × zone with a Wednesday discount;
   accessibility seats gated behind a confirmation dialog.
-- **Seat quality tiers** — rows 1–3 `low`, rows 4–8 `optimal`, rows 9+ `high`, scaled proportionally in
-  smaller rooms. This is what lets the copilot argue about *good* seats rather than merely free ones.
+- **Seat quality tiers** — rows 1–3 `low`, rows 4–8 `optimal`, rows 9+ `high`, fixed cutoffs written by
+  `getSeatMeta()` in the seed. This is what lets the copilot argue about *good* seats rather than merely
+  free ones.
+- **Realistic occupancy** — each showtime's sold fraction is drawn from a day/time-band table (quiet on a
+  Tuesday matinee, close to full on Friday prime), never 0% or 100%, and every room keeps a guaranteed
+  run of adjacent optimal-band seats so there is always a decent pair on offer. Four scenarios are
+  planted on top of that baseline (a sold-out room, a front-rows-only trap, and so on) so the copilot has
+  something interesting to reason about.
 - **Deterministic seed** — 10 films, 2 cities, 672 showtimes and 119 280 seats, reproducible from `SEED`
-  and `SEED_NOW`, including four planted scenarios (a near-soldout room, an orphan-seat trap, and so on)
-  so the copilot has something interesting to reason about.
+  and `SEED_NOW`.
+- **Status-driven catalogue** — the home page splits the film grid into `Cartelera` / `Pronto` / `Preventa`
+  tabs, each one a pure projection of `film.status`; a film can never appear under a tab its badge
+  contradicts.
 - **Read API** — five JSON endpoints, no auth, consumed by both the UI and the agent. See
   [Read API](#read-api) below.
 

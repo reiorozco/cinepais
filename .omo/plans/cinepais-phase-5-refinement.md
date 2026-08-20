@@ -504,7 +504,7 @@ crossed anyway, F1 must report it as a deviation rather than absorb it.
 
 ### Wave 5 — Ship it: migration, production data, deploy, live proof, and unblocking the video
 
-- [ ] 22. Merge to `main` and apply the migration to the production database
+- [x] 22. Merge to `main` and apply the migration to the production database
   - **Precondition:** assert `test -f .omo/evidence/wave-4-closed-cinepais-phase-5-refinement.txt` — STOP if absent.
   - **Do (step 1 — merge):** merge `phase-5-refinement` into `main` (keep `phase-5-refinement` as a local backup; never delete it).
   - **🔴 Accept (step 1) — verify the merge did not undo Fase E's publication curation, BEFORE anything expensive or irreversible runs:** `git log --oneline main -- '.omo/evidence/*' '.omo/run-continuation/*' '.omo/notepads/*' '.omo/boulder.json' | wc -l` → **`0`** (positive control: `git log --oneline main -- '.omo/plans/*' | wc -l` → non-zero). A curation violation caught here is free to fix; caught at Todo 27 it is behind a destructive re-seed and paid LLM calls.
@@ -528,7 +528,7 @@ crossed anyway, F1 must report it as a deviation rather than absorb it.
   - **⚠️ Rollback path if the site breaks after this:** `cd web && vercel rollback` to the previous READY deployment, then report.
   - **Evidence:** `task-22-…txt`.
 
-- [ ] 23. Re-seed production with the new occupancy and statuses
+- [x] 23. Re-seed production with the new occupancy and statuses
   - **⚠️ This is the single riskiest operation in the phase.** `web/prisma/seed.ts:349-356` **deletes** the whole catalogue before reinserting across ~24 unbatched `createMany` calls with **no transaction**. A run killed halfway leaves production **empty, not stale**. This is the exact operation that stalled at ~seat 110,000 in Fase E.
   - **🔴 Precondition — the same targeting trap as Todo 22.** `scripts/reseed.sh` resolves `DATABASE_URL_UNPOOLED` from the shell first and `.env.local` second. If Todo 22's `export DATABASE_URL_UNPOOLED=…` is not still in effect **in this shell**, this command wipes and reseeds **the wrong database**. Re-export it from `.env.production.local` and re-confirm the host before running. Print the host, never the credentials.
   - **Do:** announce to the user before running. Run `bash web/scripts/reseed.sh` against production **once**, timed, with nothing else touching the database.
@@ -539,14 +539,14 @@ crossed anyway, F1 must report it as a deviation rather than absorb it.
   - **🔴 QA (failure) — do NOT relaunch.** An empty production catalogue after this step is the **primary symptom of the exact stall** that cost 10+ hours in Fase E, on this exact operation. Treat it as a suspected stall and walk the §Three rules diagnostic ladder (connectivity probe → timed standalone seed → one clean run), recording each rung. **Do not re-run `reseed.sh` directly**, and do not "just try again" — the retries were themselves the cause last time. If the ladder shows a genuine defect, STOP and report; production being empty is a live outage that a second blind attempt can make permanent.
   - **Evidence:** `task-23-…txt` with the timing, the spread table and the four scenario checks.
 
-- [ ] 24. Redeploy both halves
+- [x] 24. Redeploy both halves
   - **Do:** trigger a production Vercel deployment from `main`, and `fly deploy` the agent. Confirm the Fly config is unchanged: `min_machines_running = 0`, `auto_stop_machines = 'stop'`, `soft_limit = 3`, `hard_limit = 5`, `shared-cpu-1x` / 1 GB.
   - **Accept:** the Vercel deployment is READY and the build log shows `prisma generate` (positive control: it also shows `next build`) · `curl -s -o /dev/null -w '%{http_code}' https://cinepais.vercel.app` → `200` · `curl -s https://cinepais-agent.fly.dev/health` → `{"status":"ok"}` · `grep -c "min_machines_running = 0" agent/fly.toml` → `1`.
   - **QA (zero LLM cost):** re-run Fase E's CORS preflight proof against the deployed pair — a request with the production `Origin` returns the matching `access-control-allow-origin`, and a request with `Origin: https://evil.example` does **not**. Also re-run the `fly ssh` MCP tool probe from Fase E Todo 29 to confirm the agent still reaches the real read API (this is the check that catches a regression of the `WEB_API_BASE_URL` propagation bug). **No `/chat` is spent here.**
   - **Rollback:** Vercel → `vercel rollback`; Fly → `fly releases -a cinepais-agent` then `fly deploy --image <previous digest>`, confirming the machine returns to `stopped`. Report either.
   - **Evidence:** `task-24-…txt` with both CORS transcripts and the MCP probe output.
 
-- [ ] 25. Live proof of everything this phase changed — **budgeted at 2 `POST /chat` calls**
+- [x] 25. Live proof of everything this phase changed — **budgeted at 2 `POST /chat` calls**
   - **⚠️ ANNOUNCE TO THE USER BEFORE RUNNING.** This is the only todo in the phase that spends money.
   - **Do:** with a city selected in the UI, ask **the user's original failing query** verbatim — *"Me quiero ver La Odisea en una sala IMAX, dos puestos, en un horario de noche."* — then one more targeting a different scenario. Record the exact queries.
   - **Accept (record as OBSERVED, never assert on LLM trajectory):**
@@ -559,7 +559,7 @@ crossed anyway, F1 must report it as a deviation rather than absorb it.
   - **QA:** the CTA navigates to `/showtimes/<id>?preselect=<ids>` and the seats appear selected. Capture the money shot.
   - **Evidence:** `task-25-…png` (money shot + rendering) + `task-25-…txt`, plus **2 appended lines** in the spend file.
 
-- [ ] 26. Make the documentation and the demo script tell the truth, and unblock the video
+- [x] 26. Make the documentation and the demo script tell the truth, and unblock the video
   - **Do:** re-read each file, then update: root `README.md` — the seat-quality description, the new occupancy behaviour, and the `status`-driven catalogue tabs; `web/README.md` and `agent/README.md` — same, plus the `city` field on `POST /chat` and the response-formatting contract; `agent/docs/sse-contract.md` — the `city` request field. **🔴 Resolve the row-tier drift — and note the direction, because the planner initially had it backwards.** The READMEs' prose ("rows 1–3 low, 4–8 optimal, 9+ high") **matches the shipped data** and is correct: `web/prisma/seed.ts:179-213` `getSeatMeta()` uses those fixed cutoffs, with `_maxRow` deliberately unused. What is wrong is `web/src/lib/business/quality.ts`'s `rowToTier()` — a *proportional* rule that is **dead code with zero call sites** (`grep -rn "rowToTier" web/` → one hit, its own definition). **Both READMEs** carry the false qualifier — the root `README.md` says *"rows 1–3 `low`, rows 4–8 `optimal`, rows 9+ `high`, **scaled proportionally in smaller rooms**"*, and `web/README.md` repeats the claim and credits `quality.ts`. The data does **not** scale.
 **🔴 The same dead rule exists THREE times, not once — clean up all of them.** (i) `web/src/lib/business/quality.ts` `rowToTier()`; (ii) its Python port `agent/src/cinepais_agent/seating.py:66` `row_to_tier()`, also with **zero production call sites**, kept alive only by `agent/tests/test_seating.py`; (iii) `seating.py`'s own module docstring, lines 5 and 9–12, which asserts *"the CODE uses a proportional formula … **The CODE is canonical.** row 3/13 ≈ 0.2308 > 0.23, so row 3 is 'optimal', not 'low'."* **That docstring is false** — the agent never computes tiers, it receives `seat.qualityTier` over the wire (`models.py:58` ← the read API ← the seed's fixed cutoffs) — and it is the most persuasive statement of the error in the whole repository, which is precisely why it must go.
     **Do:** (a) **delete `web/src/lib/business/quality.ts`** as dead code that contradicts shipped behaviour — an orphaned business rule in a public portfolio repo is worse than none; (b) delete `row_to_tier` from `seating.py`, together with the assertions in `test_seating.py:47-70` that lock in the proportional rule (including `assert row_to_tier(3, 13) == "optimal"` at `:54`), having first migrated the fixtures in Todo 3; (c) rewrite the `seating.py` docstring to state the truth: tiers arrive from the read API and originate in `seed.ts`'s `getSeatMeta()` fixed cutoffs, and remove the `quality.ts → row_to_tier` port line; (d) in **both** READMEs, keep the fixed cutoffs (they are correct), delete the "scaled proportionally" clause, and point the rule at `getSeatMeta()`.
@@ -569,7 +569,7 @@ crossed anyway, F1 must report it as a deviation rather than absorb it.
   - **QA:** for each edited file, quote in the evidence the line that made the stale claim and the line replacing it — do not paraphrase. Then execute every command in the READMEs' local-run sections verbatim and record the exit codes; an instruction that does not run is a FAIL.
   - **Evidence:** `task-26-…txt`.
 
-- [ ] 27. **Wave 5 close + phase handoff — HARD GATE**
+- [x] 27. **Wave 5 close + phase handoff — HARD GATE**
   - **🔴 STEP 0 — UNSET THE PRODUCTION EXPORT BEFORE ANYTHING ELSE. This is the phase's most dangerous single line.** Todos 22 and 23 `export DATABASE_URL_UNPOOLED` and Todo 23 *requires* it to still be live in the same shell. That export therefore survives into this todo, where `pnpm test` re-seeds three times with the hardcoded past `SEED_NOW = "2026-08-01"` — wiping the live catalogue minutes before this todo's own final check demands a non-empty one. The safe sequence:
     ```bash
     unset DATABASE_URL_UNPOOLED

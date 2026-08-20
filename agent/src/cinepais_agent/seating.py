@@ -2,13 +2,14 @@
 
 Port targets:
 - web/src/lib/business/layout.ts  → ROOM_LAYOUTS, normalize_room
-- web/src/lib/business/quality.ts → row_to_tier
 - web/src/lib/business/orphan.ts  → would_leave_orphan
 - web/src/lib/business/selection.ts (block-scoped logic) → find_adjacent
 
-NOTE on tier boundaries: web/README.md prose says "rows 1-3 low, 4-8 optimal" for a
-13-row room, but the CODE uses a proportional formula (pct = row / max_row). The CODE
-is canonical. row 3/13 ≈ 0.2308 > 0.23, so row 3 is "optimal", not "low".
+NOTE on quality tiers: this module does not compute them. `qualityTier` arrives on
+every seat over the read API wire (models.Seat.qualityTier) and originates in
+web/prisma/seed.ts's `getSeatMeta()`, which uses FIXED cutoffs regardless of room
+size — row ≤ 3 "low", rows 4-8 "optimal", row ≥ 9 "high". There is no proportional
+formula anywhere in the shipped product.
 """
 
 from __future__ import annotations
@@ -56,29 +57,6 @@ def normalize_room(room: str) -> str:
     if room.startswith("2d"):
         return "2d"
     return "premium"
-
-
-# ---------------------------------------------------------------------------
-# Quality tier
-# ---------------------------------------------------------------------------
-
-
-def row_to_tier(row: int, max_row: int) -> QualityTier:
-    """Port of rowToTier from quality.ts.
-
-    Uses proportional formula: pct = row / max_row.
-    - pct ≤ 0.23  → "low"
-    - pct ≤ 0.62  → "optimal"
-    - pct > 0.62  → "high"
-
-    NOTE: README prose differs from this formula; the formula is canonical.
-    """
-    pct = row / max_row
-    if pct <= 0.23:
-        return "low"
-    if pct <= 0.62:
-        return "optimal"
-    return "high"
 
 
 # ---------------------------------------------------------------------------
@@ -180,8 +158,7 @@ def _band_centre_rows(seats: list[SeatForAdjacency]) -> dict[str, float]:
     This is also why the bounds are read from the data rather than recomputed:
     `qualityTier` is written by web/prisma/seed.ts `getSeatMeta()`, which uses
     FIXED cutoffs regardless of room size (row ≤ 3 low, rows 4-8 optimal, row ≥ 9
-    high). The proportional `row_to_tier` rule above is not what produced these
-    values, and the "high" band is open-ended upwards, so its centre cannot be
+    high), and the "high" band is open-ended upwards, so its centre cannot be
     derived from the cutoffs alone anyway.
     """
     bounds: dict[str, tuple[int, int]] = {}

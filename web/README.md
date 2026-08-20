@@ -207,7 +207,7 @@ curl http://localhost:3000/api/showtimes/st-site-bog-3-imax-4-2245/seats
 
 - **Orphan rule** (`src/lib/business/orphan.ts`): selecting seats must not leave exactly 1 available seat isolated between sold/aisle/edge on both sides.
 - **Cutoff rule** (`src/lib/business/cutoff.ts`): showtimes starting within 15 minutes of `now` are excluded from `/api/showtimes`.
-- **Quality rule** (`src/lib/business/quality.ts`): rows 1–3 = `low`, rows 4–8 = `optimal`, rows 9+ = `high` (proportional for smaller rooms).
+- **Quality rule** (`prisma/seed.ts` `getSeatMeta()`): rows 1–3 = `low`, rows 4–8 = `optimal`, rows 9+ = `high` — fixed cutoffs, same for every room size.
 
 ## Copiloto (Fase D)
 

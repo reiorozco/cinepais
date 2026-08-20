@@ -4,15 +4,26 @@
 
 `POST /chat`
 
+## Request
+
 **Request body** (JSON):
 ```json
 {
   "message": "¿Dónde veo La Odisea en IMAX este finde con 2 sillas juntas?",
-  "sessionId": "user-session-abc123"
+  "sessionId": "user-session-abc123",
+  "city": "Medellín"
 }
 ```
 
 `sessionId`: 1-128 characters. Shorter is better for memory efficiency.
+
+`city`: optional, top-level, sibling of `message`/`sessionId`. On the wire it is either a JSON string
+or the key is absent entirely — never `null`, never `""`. When present it anchors the search to that
+city (the web widget sends the header's currently selected city automatically); the agent turns it
+into `[contexto: ciudad seleccionada = Medellín]` prepended to the user turn. Validated server-side by
+`sse.sanitize_city` (≤64 characters, letters only) — there is no client-side re-validation.
+
+## Response
 
 **Response**: `text/event-stream` (Server-Sent Events)
 

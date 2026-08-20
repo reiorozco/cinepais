@@ -167,8 +167,8 @@ dónde está todo. Un titubeo corto antes de cada clic vale más que la fluidez.
 
 | # | Plano | En pantalla | Acción | Duración |
 |---|---|---|---|---|
-| 1 | Home | Carrusel de estrenos + grilla «Cartelera» | Abrir el selector **Ciudad** del header y elegir **Medellín** | 8 s |
-| 2 | Home | Grilla de 10 pósters | Bajar hasta la grilla y hacer clic en **La Odisea** (sexta tarjeta; *no* está en el carrusel) | 8 s |
+| 1 | Home | Carrusel de estrenos + grilla de películas con pestañas **Cartelera / Pronto / Preventa** | Abrir el selector **Ciudad** del header y elegir **Medellín** | 8 s |
+| 2 | Home | Pestaña **Cartelera** activa por defecto, grilla de pósters | Bajar hasta la grilla y hacer clic en **La Odisea** (sexta tarjeta; *no* está en el carrusel) | 8 s |
 | 3 | `/films/film-01` | Hero, ficha técnica, sinopsis | Bajar hasta la sección **Horarios** | 6 s |
 | 4 | Horarios | Fila de 7 chips de fecha, el primero seleccionado | Clic en el **segundo chip** (desfase 1) | 4 s |
 | 5 | Horarios | Filtro **Formato**: `Todos · IMAX · 2D` | Clic en **IMAX** | 4 s |
@@ -176,7 +176,7 @@ dónde está todo. Un titubeo corto antes de cada clic vale más que la fluidez.
 | 7 | Horarios | Las dos funciones, visualmente idénticas | Clic en **la más tarde de las dos** (`$FRONT`) | 5 s |
 | 8 | **`/showtimes/$FRONT`** | **`Sillas · 40 / 260 disponibles`. Filas A y B en verde; C a M apagadas** | **Detenerse aquí. Pasar el cursor por la sala vacía. Este es el plano que justifica todo el proyecto: hay sillas, sí — pero todas pegadas a la pantalla, y la leyenda no dice una palabra sobre calidad de ubicación** | **14 s** |
 | 9 | ↩ | — | **Atrás**, y clic en la **otra** función (`$GOOD`) | 8 s |
-| 10 | `/showtimes/$GOOD` | `Sillas · 260 / 260 disponibles` | Buscar dos sillas juntas y decentes. Elegir **fila D** (cuarta fila): clic en dos asientos contiguos. El contador pasa a `Sillas (2/4)`, total `$ 64.000` | 12 s |
+| 10 | `/showtimes/$GOOD` | Sala con ocupación realista — la mayoría de las sillas disponibles, algunas ya vendidas salpicadas por la sala (nunca `0 / N` ni `N / N`: ninguna función queda vacía ni llena) | Buscar dos sillas juntas y decentes. Elegir **fila D** (cuarta fila): clic en dos asientos contiguos. El contador pasa a `Sillas (2/4)`, total `$ 64.000` | 12 s |
 | 11 | `/checkout` | «Resumen de compra», boletas, totales, aviso de demo | Clic en **Seleccionar boletas** y dejar leer el resumen | 8 s |
 | 12 | `/checkout/confirmation` | «¡Boletas confirmadas!», número de orden `CP-XXXXXX`, «Esto es una demo — no se realizó ningún cobro.» | Clic en **Confirmar compra (demo)** | 6 s |
 
@@ -211,6 +211,11 @@ copiloto tiene que enfrentar la misma sala de la trampa, y su respuesta esperada
 sino **nombrar el tradeoff y llevar la venta a otra parte**: recomienda una función con sillas
 realmente buenas y ofrece la de las primeras filas como alternativa, marcada como calidad baja.
 Nunca desanima la compra — esa es la postura de negocio del proyecto, y se ve en cámara.
+
+El par que marca en el mapa no cae en cualquier sitio libre: el ranking centra la pareja de sillas
+sobre el eje horizontal de la sala (no sobre el centro de su propio bloque) y, dentro de la banda de
+calidad ganadora, sobre la fila media de esa banda — así que en una sala vacía la recomendación
+aterriza en el bloque central, nunca en la esquina lateral de la primera fila.
 
 **Consulta B — respaldo / segunda toma.** Sin ninguna referencia temporal, así que no puede caducar:
 
@@ -299,5 +304,7 @@ verificaron contra la API de lectura, con los ids resueltos en tiempo de ejecuci
 
 Transcripciones y códigos de salida: `.omo/evidence/task-34-cinepais-phase-4-deploy.txt`.
 
-**Siguiente paso:** `specs/002-implementation-plan.md` §Sesión E, entregable #2 — grabar (Todo 35).
-El video se guarda **fuera del repo**; el README enlaza a él.
+El guion está al día con la realidad enviada a producción: pestañas de catálogo funcionando, sillas
+del copiloto centradas por el ranking (no la esquina lateral) y ocupación realista en las salas
+normales. **No queda ningún bloqueador conocido para grabar.** El video se guarda **fuera del repo**;
+el README enlaza a él.

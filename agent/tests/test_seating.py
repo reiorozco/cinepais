@@ -28,12 +28,13 @@ def _fixed_cutoff_tier(row: int) -> str:
     (read API → models.Seat.qualityTier), so a fixture that invents tiers by any other
     rule is testing a room the product never serves.
 
-    Deliberately NOT `seating.row_to_tier`, the proportional port of the dead
-    web/src/lib/business/quality.ts rule (zero production call sites). The two rules
-    disagree on real rows — IMAX row 3 is `optimal` proportionally (3/13 = 0.2308 > 0.23)
-    but `low` in production — which moves the optimal band from rows 3-8 (centre 5.5) to
-    rows 4-8 (centre 6.0). Ranking is scored against that band centre, so a fixture built
-    on the dead rule would let the ranking be tuned to a band production does not have.
+    Deliberately NOT the proportional tier helper this module used to carry, nor its
+    TypeScript original — both had zero production call sites and both were deleted in
+    Todo 26. The two rules disagree on real rows: IMAX row 3 is `optimal` proportionally
+    (3/13 = 0.2308 > 0.23) but `low` in production, which moves the optimal band from
+    rows 3-8 (centre 5.5) to rows 4-8 (centre 6.0). Ranking is scored against that band
+    centre, so a fixture built on the dead rule would let the ranking be tuned to a band
+    production does not have.
     """
     if row <= 3:
         return "low"
@@ -131,14 +132,18 @@ def test_normalize_room() -> None:
 # ---------------------------------------------------------------------------
 # Quality tiers — REQUIRED named test
 #
-# RETIRED: `test_tier_boundaries_match_proportional_code`, which asserted
-# `row_to_tier`'s proportional rule room by room (including the explicit
-# `assert row_to_tier(3, 13) == "optimal"`). That rule has ZERO production call
-# sites — `grep -rn "row_to_tier" agent/` found only its own definition and that
-# test — and its TypeScript original, web/src/lib/business/quality.ts, is dead
-# too. It asserted behaviour the product does not have, and disagreed with the
-# tiers the read API actually serves. Replaced below by the production rule.
-# `row_to_tier` itself is deleted in Todo 26; this only stops testing it.
+# RETIRED: `test_tier_boundaries_match_proportional_code`, which asserted the
+# proportional tier rule room by room (including an explicit assertion that IMAX
+# row 3 was "optimal"). That rule had ZERO production call sites — only its own
+# definition and that test — and its TypeScript original was dead too. It
+# asserted behaviour the product does not have, and disagreed with the tiers the
+# read API actually serves. Replaced below by the production rule. Both copies of
+# the helper were deleted in Todo 26; this only stopped testing it.
+#
+# The dead helper's identifier is deliberately not spelled anywhere in this file.
+# The repo-wide grep that proves it is gone would match the comment and report a
+# false positive — the same trap markdown-lite.tsx documents. Keep the guard
+# measuring code, not commentary.
 # ---------------------------------------------------------------------------
 
 

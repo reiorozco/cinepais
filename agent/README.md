@@ -99,8 +99,14 @@ uv run pytest tests/ -m "not evals" -v
 ```bash
 curl -sN -X POST http://localhost:8000/chat \
   -H 'content-type: application/json' \
-  -d '{"message":"¿Dónde veo La Odisea en IMAX este finde con 2 sillas juntas?","sessionId":"demo-1"}'
+  -d '{"message":"¿Dónde veo La Odisea en IMAX este finde con 2 sillas juntas?","sessionId":"demo-1","city":"Medellín"}'
 ```
+
+`city` is optional, top-level, a sibling of `message`/`sessionId`. When present it anchors the search
+to that city without the person having to say it out loud — the web widget sends the header's selected
+city automatically. Omit the key entirely for city-less behaviour; sending `null` or `""` is not the
+same as omitting it. Validated by `sse.sanitize_city` (≤64 chars, letters only) before it reaches the
+agent as `[contexto: ciudad seleccionada = Medellín]` prepended to the user turn.
 
 Example stream:
 ```
@@ -118,6 +124,16 @@ data: {"type":"done","sessionQueriesUsed":1,"sessionQueryCap":20}
 ```
 
 See [`docs/sse-contract.md`](docs/sse-contract.md) for the full event schema and Fase D integration guide.
+
+## Response-formatting contract
+
+The `recommendation` card already shows sede, ciudad, fecha, hora, formato, zona and precio — the
+narrated `token` text must not repeat any of that. The system prompt (`prompts.py`) constrains the
+model's Spanish prose to a small subset of Markdown: plain running text, `**negrita**` for a single
+emphasised point, and `- ` bullet lists only when they are genuinely needed. Headings (`#`), tables,
+horizontal rules (`---`), code blocks and emoji are explicitly forbidden. The web widget renders that
+subset with a small hand-rolled, dependency-free component — no Markdown library, so the surface stays
+narrow enough to reason about and there is nothing that can inject raw HTML.
 
 ## Security
 
