@@ -46,3 +46,5 @@ initial-load.png
 # OS
 .DS_Store
 *.log
+.vercel
+.env*
