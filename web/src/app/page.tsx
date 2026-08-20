@@ -59,7 +59,13 @@ const FILM_TABS: readonly FilmTab[] = [
  */
 export default async function Home() {
   const films = await getFilms();
-  const heroFilms = films.slice(0, 3);
+  // Only purchasable titles reach the hero. `films` is title-sorted and
+  // unfiltered, so an unlucky re-seed could put a `pronto` film — one with
+  // zero showtimes by construction — behind a "Ver horarios" CTA that lands on
+  // a detail page with nothing to buy.
+  const heroFilms = films
+    .filter((film) => film.status === "cartelera")
+    .slice(0, 3);
 
   return (
     <main>
@@ -67,11 +73,15 @@ export default async function Home() {
 
       <section className="mx-auto max-w-6xl px-6 py-10">
         <header className="mb-6 flex flex-col gap-1">
+          {/* Not "Cartelera": the section holds all three tabs, so titling it
+              after the first one contradicted the Preventa and Pronto panels
+              sitting directly underneath it. */}
           <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            Cartelera
+            Películas
           </h1>
           <p className="text-sm text-muted-foreground">
-            Explora las películas en cartelera y compra tus boletas en segundos.
+            Explora la cartelera, las preventas y los estrenos que vienen —
+            y compra tus boletas en segundos.
           </p>
         </header>
 

@@ -18,7 +18,10 @@ type BadgeVariant = ComponentProps<typeof Badge>["variant"];
 
 /**
  * Marketing badge per catalogue status — the single source of truth shared with
- * the home tabs, which group films by the very same `film.status` field.
+ * the home tabs and the hero carousel, which key off the very same
+ * `film.status` field. Exported rather than duplicated: the hero previously
+ * hardcoded "Estreno" on every slide, which lied the moment a `preventa` or
+ * `pronto` title reached it.
  *
  * Typed as a total `Record` on purpose: adding a value to `FilmStatusSchema`
  * breaks this map at compile time instead of silently rendering no badge.
@@ -26,7 +29,7 @@ type BadgeVariant = ComponentProps<typeof Badge>["variant"];
  * `pronto` titles are not purchasable yet, so they get the quietest variant and
  * must not compete with the two states that can actually convert.
  */
-const STATUS_BADGE: Record<
+export const STATUS_BADGE: Record<
   Film["status"],
   { label: string; variant: BadgeVariant }
 > = {
@@ -79,7 +82,10 @@ export function FilmCard({ film, priority = false }: FilmCardProps) {
             {genresLabel}
           </p>
         ) : null}
-        <p className="text-[11px] uppercase tracking-wide text-muted-foreground/80">
+        {/* No `/80` here: at 11px the muted token is already at 4.6:1, and
+            fading it dropped rating + runtime — the two facts a visitor scans
+            before picking a film — to 3.23:1, under the 4.5:1 AA floor. */}
+        <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
           {film.rating} · {film.durationMin} min
         </p>
       </div>

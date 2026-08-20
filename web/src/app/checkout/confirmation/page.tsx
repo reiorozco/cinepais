@@ -1,9 +1,23 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { CheckCircle2, Calendar, MapPin, Clock } from "lucide-react";
 import { getSeats, getFilmDetail } from "@/lib/api/queries";
 import { formatCOP } from "@/lib/format";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { SelectionClearer } from "@/components/checkout/selection-clearer";
+
+/**
+ * Static, not `generateMetadata`. This URL is shareable — it carries `order`,
+ * `showtimeId` and `seatIds` — and putting someone's order number in a page
+ * title they might paste into a chat is a worse default than a generic one.
+ */
+export const metadata: Metadata = {
+  title: "Boletas confirmadas",
+  description:
+    "Confirmación de boletas CinePaís. Demo con datos ficticios — no se realizó ningún cobro.",
+};
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -183,10 +197,17 @@ export default async function ConfirmationPage({
       </p>
 
       {/* ── Back to catalog ───────────────────────────────────────────────── */}
+      {/* A real button, not a 20px text link: this is the only forward action
+          on the last screen of the funnel, where the visitor decides whether
+          to keep browsing. `buttonVariants` rather than `<Button>` because the
+          element has to stay an `<a>` for prefetching and middle-click. */}
       <div className="text-center">
         <Link
           href="/"
-          className="inline-flex items-center gap-1.5 text-sm text-primary underline-offset-4 hover:underline"
+          className={cn(
+            buttonVariants({ variant: "outline" }),
+            "h-11 px-6 sm:h-9",
+          )}
         >
           Volver a la cartelera
         </Link>

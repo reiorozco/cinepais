@@ -82,6 +82,13 @@ export type CopilotChat = {
    * the lifetime of this tab.
    */
   sessionCapped: boolean;
+  /**
+   * `true` once the agent reports the global daily budget is spent. Kept apart
+   * from {@link sessionCapped} because the two have different escapes: a new
+   * tab clears a session cap and does nothing at all for a daily one, so one
+   * flag driving both would put the wrong instruction on screen.
+   */
+  dailyCapped: boolean;
   send: (text: string) => void;
 };
 
@@ -98,12 +105,18 @@ const SESSION_STORAGE_KEY = "cinepais.copilot.sessionId";
 export const RATE_LIMIT_COOLDOWN_MS = 60_000;
 
 /**
- * The three error codes that do more than render a bubble. Everything else in
+ * The four error codes that do more than render a bubble. Everything else in
  * the contract's table — `input_too_long`, `timeout`, `internal_error`, … —
  * stays a plain bubble the user can immediately retry from.
+ *
+ * Both caps must lock the composer. Leaving `daily_cap_exceeded` retryable let
+ * the visitor who hit the global budget resend indefinitely, spending a real
+ * request against the agent each time and reading as broken rather than
+ * rationed.
  */
 const RATE_LIMIT_CODE = "rate_limit_exceeded";
 const SESSION_CAP_CODE = "session_cap_exceeded";
+const DAILY_CAP_CODE = "daily_cap_exceeded";
 const UNREACHABLE_CODE = "agent_unreachable";
 
 /**
@@ -192,6 +205,7 @@ export function useCopilotChat(): CopilotChat {
   const [counters, setCounters] = useState<SessionCounters | null>(null);
   const [cooldownUntil, setCooldownUntil] = useState<number | null>(null);
   const [sessionCapped, setSessionCapped] = useState(false);
+  const [dailyCapped, setDailyCapped] = useState(false);
 
   // `useOptionalCity`, not `useCity`: the city is a search anchor the agent
   // treats as optional, so a widget mounted outside `CityProvider` must lose
@@ -243,7 +257,7 @@ export function useCopilotChat(): CopilotChat {
     // Permanent for the rest of this hook instance. The session id is never
     // touched here: minting a fresh one would hand the user a clean cap and
     // defeat the control outright.
-    if (sessionCapped) return;
+    if (sessionCapped || dailyCapped) return;
 
     // Self-expiring, so no timer has to re-enable anything: once the wall clock
     // passes the deadline this guard simply stops matching.
@@ -334,6 +348,9 @@ export function useCopilotChat(): CopilotChat {
           if (event.code === SESSION_CAP_CODE) {
             setSessionCapped(true);
           }
+          if (event.code === DAILY_CAP_CODE) {
+            setDailyCapped(true);
+          }
 
           setStatus("error");
           return;
@@ -358,6 +375,7 @@ export function useCopilotChat(): CopilotChat {
     counters,
     cooldownUntil,
     sessionCapped,
+    dailyCapped,
     send,
   };
 }

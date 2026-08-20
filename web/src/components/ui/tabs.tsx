@@ -23,8 +23,11 @@ function Tabs({
   )
 }
 
+// `h-11` on touch, the shadcn 32px default from `sm:`. Tab strips are how a
+// visitor discovers the Pronto / Preventa panels and the IMAX / Premium
+// formats at all, and at 25px they were the smallest controls in the app.
 const tabsListVariants = cva(
-  "group/tabs-list inline-flex w-fit items-center justify-center rounded-lg p-[3px] text-muted-foreground group-data-horizontal/tabs:h-8 group-data-vertical/tabs:h-fit group-data-vertical/tabs:flex-col data-[variant=line]:rounded-none",
+  "group/tabs-list inline-flex w-fit items-center justify-center rounded-lg p-[3px] text-muted-foreground group-data-horizontal/tabs:h-11 sm:group-data-horizontal/tabs:h-8 group-data-vertical/tabs:h-fit group-data-vertical/tabs:flex-col data-[variant=line]:rounded-none",
   {
     variants: {
       variant: {

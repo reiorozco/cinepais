@@ -478,7 +478,7 @@ crossed anyway, F1 must report it as a deviation rather than absorb it.
 
 ### Wave 4 — Impeccable UX pass (bounded, local)
 
-- [ ] 19. Run the `impeccable` skill as an audit and produce a prioritised, evidence-backed findings list
+- [x] 19. Run the `impeccable` skill as an audit and produce a prioritised, evidence-backed findings list
   - **Precondition (step 0):** assert `test -f .omo/evidence/wave-3-closed-cinepais-phase-5-refinement.txt` — STOP if absent. **Fresh session ⇒ start and poll the dev server** using the identical block from Todo 15 step 0; this todo is a browser audit and cannot run without it. Also smoke-check the skill loads: `skill(name="impeccable")` — if unavailable, STOP and report rather than improvising a substitute audit.
   - **Do:** load the `impeccable` skill and audit the app **as a first-time visitor arriving from a phone**, since that is how LinkedIn traffic arrives. Cover at minimum: the home carousel and catalogue, the film detail and date/format selector, the seat map (the densest screen, and the one the demo shows), checkout and confirmation, and the copilot bubble/panel including its loading, error, rate-limit and daily-cap states.
   - **🔴 ZERO LLM SPEND IN THIS TODO. Do not send a live chat message — not one.** This audit is **not** in the phase's budget ledger; only Todo 25 is, at 2 calls. Reaching the rate-limit state live would need ≥ 11 requests in a minute (`limiter.limit("10/minute")`), and the daily-cap state would need to exhaust `DAILY_REQUEST_CAP` — either would blow the phase's entire 4-call ceiling inside an unbudgeted todo. Audit those states by **reading the widget's code paths** and by rendering them from fixtures or local component state, exactly as Fase D's fixture-replay tests did. If a state cannot be reached without spending, record it as *not visually audited, reviewed by code path* rather than spending to see it. Produce a findings list with, for each item: the screen, what is wrong, why it matters to a visitor, a proposed fix, and a severity.
@@ -487,13 +487,13 @@ crossed anyway, F1 must report it as a deviation rather than absorb it.
   - **QA:** capture a screenshot per audited screen at a mobile viewport **and** a desktop one; a finding without a screenshot or a file reference is not a finding.
   - **Evidence:** `task-19-…md` (the findings list) + screenshots.
 
-- [ ] 20. Apply the in-scope Impeccable findings
+- [x] 20. Apply the in-scope Impeccable findings
   - **Do:** implement every in-scope finding from Todo 19. Touch only files named in that list; anything else is scope creep. Keep UI copy Spanish and code English.
   - **Accept:** `pnpm lint`, `npx tsc --noEmit`, `pnpm build` exit 0 · every in-scope finding is marked resolved with the file and line that resolved it · `git diff --name-only main -- web/src` contains no file absent from Todo 19's list (or the exception is justified in the evidence).
   - **QA:** re-capture the same screenshots as Todo 19 at the same viewports and place them side by side with the originals — a before/after pair per changed screen. Failure path: confirm the full purchase flow still completes end to end after the changes; visual polish that breaks the flow is a regression, not a fix.
   - **Evidence:** `task-20-…txt` + the before/after screenshot pairs.
 
-- [ ] 21. **Wave 4 close — HARD GATE. Do not start Todo 22 in this session.**
+- [x] 21. **Wave 4 close — HARD GATE. Do not start Todo 22 in this session.**
   - **Do:** **the standard gate** in order, including **`bash web/scripts/reseed.sh` after `pnpm test` and before `pnpm build`**. Write `.omo/handoff-fase-f-wave-4.md` and **stage it into this commit**.
   - **🔴 This is the last gate before Wave 5 touches production deliberately.** Leaving the demo dead here means Wave 5 opens against an empty database and every one of its checks becomes unreadable.
   - **Commit:** `style(web): UX polish pass within the existing design language`

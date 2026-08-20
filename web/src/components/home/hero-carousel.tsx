@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { STATUS_BADGE } from "@/components/films/film-card";
 import type { Film } from "@/lib/api/schemas";
 
 type HeroCarouselProps = {
@@ -89,6 +90,7 @@ export function HeroCarousel({ films }: HeroCarouselProps) {
     >
       <div
         ref={scrollerRef}
+        id="hero-scroller"
         data-testid="hero-scroller"
         className="flex snap-x snap-mandatory overflow-x-auto scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
@@ -124,12 +126,18 @@ export function HeroCarousel({ films }: HeroCarouselProps) {
 
                 {/* Content */}
                 <div className="relative z-10 mx-auto flex h-full max-w-6xl flex-col justify-end px-6 pb-14 pt-10">
+                  {/* Label only, from the catalogue's shared map. The variant
+                      is deliberately ignored: it encodes light-surface styling
+                      that has no meaning on a photographic backdrop, where the
+                      glass treatment below is the hero's own token. */}
                   <span className="inline-flex w-fit items-center rounded-full bg-white/10 px-3 py-1 text-[11px] font-medium uppercase tracking-wider text-white/80 backdrop-blur-sm">
-                    Estreno
+                    {STATUS_BADGE[film.status].label}
                   </span>
-                  <h2 className="mt-3 max-w-xl text-3xl font-bold leading-tight text-white sm:text-4xl md:text-5xl">
+                  {/* `<p>`, not `<h2>`: three slide titles ahead of the page's
+                      own `<h1>` made the document outline start at level 2. */}
+                  <p className="mt-3 max-w-xl text-3xl font-bold leading-tight text-white sm:text-4xl md:text-5xl">
                     {film.title}
-                  </h2>
+                  </p>
                   <p className="mt-2 max-w-lg text-sm text-white/75">
                     {film.rating} · {film.durationMin} min · {film.genres.join(" · ")}
                   </p>
@@ -154,14 +162,16 @@ export function HeroCarousel({ films }: HeroCarouselProps) {
         </ul>
       </div>
 
-      {/* Prev / Next controls */}
+      {/* Prev / Next controls. `p-3` makes a 44px box around the 20px icon,
+          and `top-1/3` on mobile lifts them off the title and the "Ver
+          horarios" CTA they were sitting on top of at 390px. */}
       <button
         type="button"
         aria-label="Estreno anterior"
         aria-controls="hero-scroller"
         onClick={handlePrev}
         disabled={!canPrev}
-        className="absolute left-3 top-1/2 z-20 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white shadow-lg backdrop-blur-sm transition hover:bg-black/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 disabled:pointer-events-none disabled:opacity-30 sm:left-4"
+        className="absolute left-3 top-1/3 z-20 -translate-y-1/2 rounded-full bg-black/50 p-3 text-white shadow-lg backdrop-blur-sm transition hover:bg-black/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 disabled:pointer-events-none disabled:opacity-30 sm:left-4 sm:top-1/2"
       >
         <ChevronIcon direction="left" />
       </button>
@@ -171,16 +181,19 @@ export function HeroCarousel({ films }: HeroCarouselProps) {
         aria-controls="hero-scroller"
         onClick={handleNext}
         disabled={!canNext}
-        className="absolute right-3 top-1/2 z-20 -translate-y-1/2 rounded-full bg-black/50 p-2 text-white shadow-lg backdrop-blur-sm transition hover:bg-black/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 disabled:pointer-events-none disabled:opacity-30 sm:right-4"
+        className="absolute right-3 top-1/3 z-20 -translate-y-1/2 rounded-full bg-black/50 p-3 text-white shadow-lg backdrop-blur-sm transition hover:bg-black/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 disabled:pointer-events-none disabled:opacity-30 sm:right-4 sm:top-1/2"
       >
         <ChevronIcon direction="right" />
       </button>
 
       {/* Dot indicators */}
+      {/* The dot is 8px because that is what a dot should look like; the
+          BUTTON is padded out to a real target around it. `bottom-1` offsets
+          the added `py-3` so the visible pill stays exactly where it was. */}
       <div
         role="tablist"
         aria-label="Selector de estreno"
-        className="absolute inset-x-0 bottom-4 z-20 flex justify-center gap-2"
+        className="absolute inset-x-0 bottom-1 z-20 flex justify-center"
       >
         {slides.map((film, index) => {
           const isActive = index === active;
@@ -192,11 +205,18 @@ export function HeroCarousel({ films }: HeroCarouselProps) {
               aria-selected={isActive}
               aria-label={`Ir al estreno ${index + 1}`}
               onClick={() => scrollToIndex(index)}
-              className={
-                "h-2 rounded-full transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 " +
-                (isActive ? "w-6 bg-white" : "w-2 bg-white/40 hover:bg-white/60")
-              }
-            />
+              className="group/hero-dot px-2 py-3 focus-visible:outline-none"
+            >
+              <span
+                aria-hidden
+                className={
+                  "block h-2 rounded-full transition-all group-focus-visible/hero-dot:ring-2 group-focus-visible/hero-dot:ring-white/60 " +
+                  (isActive
+                    ? "w-6 bg-white"
+                    : "w-2 bg-white/40 group-hover/hero-dot:bg-white/60")
+                }
+              />
+            </button>
           );
         })}
       </div>

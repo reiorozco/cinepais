@@ -26,19 +26,19 @@ export function Footer() {
         <nav aria-label="Enlaces legales" className="flex items-center gap-6">
           <Link
             href="#"
-            className="text-sm text-white/70 transition-colors hover:text-white focus-visible:text-white focus-visible:outline-none focus-visible:underline underline-offset-4"
+            className="inline-flex min-h-11 items-center text-sm text-white/70 transition-colors hover:text-white focus-visible:text-white focus-visible:outline-none focus-visible:underline underline-offset-4"
           >
             Términos
           </Link>
           <Link
             href="#"
-            className="text-sm text-white/70 transition-colors hover:text-white focus-visible:text-white focus-visible:outline-none focus-visible:underline underline-offset-4"
+            className="inline-flex min-h-11 items-center text-sm text-white/70 transition-colors hover:text-white focus-visible:text-white focus-visible:outline-none focus-visible:underline underline-offset-4"
           >
             Privacidad
           </Link>
         </nav>
 
-        <ul aria-label="Redes sociales" className="flex items-center gap-2">
+        <ul aria-label="Redes sociales" className="flex items-center gap-1 sm:gap-2">
           <li>
             <SocialLink label="CinePaís en Facebook">
               <FacebookIcon />
@@ -71,7 +71,7 @@ function SocialLink({
     <Link
       href="#"
       aria-label={label}
-      className="inline-flex size-9 items-center justify-center rounded-full text-white/70 transition-colors hover:bg-white/10 hover:text-white focus-visible:bg-white/10 focus-visible:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+      className="inline-flex size-11 items-center justify-center rounded-full text-white/70 transition-colors hover:bg-white/10 hover:text-white focus-visible:bg-white/10 focus-visible:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 sm:size-9"
     >
       {children}
     </Link>

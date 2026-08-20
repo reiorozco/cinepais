@@ -215,11 +215,20 @@ export function ShowtimesExplorer({ showtimes }: ShowtimesExplorerProps) {
             description="Prueba cambiar de ciudad en el selector del encabezado."
           />
         ) : (
-          <div
-            role="tablist"
-            aria-label="Selector de fecha"
-            className="flex gap-2 overflow-x-auto pb-2"
-          >
+          <div className="relative">
+            {/* Matches the seat map's scroller treatment: the clipped 5th chip
+                is the primary affordance, the fade is the confirmation. It
+                resolves to `--background`, so on a viewport wide enough to
+                show all seven days it paints white on white. */}
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-background to-transparent sm:hidden"
+            />
+            <div
+              role="tablist"
+              aria-label="Selector de fecha"
+              className="flex gap-2 overflow-x-auto pb-2"
+            >
             {dates.map((d) => {
               const label = formatDateLabel(d);
               const isToday = d === today;
@@ -246,10 +255,15 @@ export function ShowtimesExplorer({ showtimes }: ShowtimesExplorerProps) {
                   <span className="text-lg font-bold leading-none">
                     {label.day}
                   </span>
+                  {/* One step darker than `--muted-foreground`, which lands
+                      at 4.36:1 on this chip at 11px — just under the 4.5:1 AA
+                      floor. */}
                   <span
                     className={cn(
                       "text-[11px] font-medium tracking-wide",
-                      isActive ? "text-primary-foreground/85" : "text-muted-foreground"
+                      isActive
+                        ? "text-primary-foreground/85"
+                        : "text-foreground/70",
                     )}
                   >
                     {label.month}
@@ -257,6 +271,7 @@ export function ShowtimesExplorer({ showtimes }: ShowtimesExplorerProps) {
                 </button>
               );
             })}
+            </div>
           </div>
         )}
       </div>

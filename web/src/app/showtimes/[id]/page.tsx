@@ -1,3 +1,5 @@
+import { cache } from "react";
+import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { Calendar, Clock, MapPin } from "lucide-react";
@@ -73,6 +75,38 @@ type SeatMapPageProps = {
 };
 
 /**
+ * `generateMetadata` and the page body both need the same two rows, and
+ * `getSeats` pulls every seat in the room (up to 260). `cache()` collapses
+ * them into one query per request — without it, adding a title would have
+ * doubled the heaviest read in the app.
+ */
+const loadShowtime = cache(async (id: string) => {
+  const data = await getSeats(id);
+  if (!data) return null;
+
+  const film = await getFilmDetail(data.showtime.filmId);
+  if (!film) return null;
+
+  return { data, film };
+});
+
+export async function generateMetadata({
+  params,
+}: SeatMapPageProps): Promise<Metadata> {
+  const { id } = await params;
+  const loaded = await loadShowtime(id);
+  if (!loaded) return { title: "Función no encontrada" };
+
+  const { data, film } = loaded;
+  const { showtime } = data;
+
+  return {
+    title: `Sillas · ${film.title} — ${showtime.time}`,
+    description: `Elige tus sillas para ${film.title} en ${showtime.siteName} (${showtime.city}), ${formatShowtimeDate(showtime.businessDate)} a las ${showtime.time}.`,
+  };
+}
+
+/**
  * Seat map route. Server component: reads the seed data via `getSeats` and
  * `getFilmDetail`, renders the film + function metadata (info card), then
  * mounts the interactive `<SeatMap>` client island.
@@ -94,14 +128,13 @@ export default async function SeatMapPage({
 
   const preselectSeatIds = parsePreselectParam(preselect);
 
-  const data = await getSeats(id);
-  if (!data) notFound();
+  const loaded = await loadShowtime(id);
+  if (!loaded) notFound();
 
-  const film = await getFilmDetail(data.showtime.filmId);
-  if (!film) notFound();
+  const { data, film } = loaded;
 
   return (
-    <main className="mx-auto max-w-6xl px-6 pb-40 pt-8">
+    <main className="mx-auto max-w-6xl px-6 pb-40 pt-6 sm:pt-8">
       <InfoCard showtime={data.showtime} film={film} />
       <SeatMap
         showtime={data.showtime}
@@ -125,11 +158,17 @@ function InfoCard({
   film: FilmDetail;
 }) {
   return (
+    /* Compact on touch. Everything on this card restates a decision the
+       visitor made on the previous screen, and at 390px the full-size version
+       pushed all 260 seats — the entire point of the route — below the fold.
+       The poster is the biggest offender (128×192) and is dropped outright
+       under `sm:`; nothing here is load-bearing that the title does not
+       already carry. */
     <section
       aria-label="Detalles de la función"
-      className="flex flex-col gap-6 rounded-xl bg-card p-6 ring-1 ring-foreground/10 sm:flex-row"
+      className="flex flex-col gap-4 rounded-xl bg-card p-4 ring-1 ring-foreground/10 sm:flex-row sm:gap-6 sm:p-6"
     >
-      <div className="relative aspect-[2/3] w-32 shrink-0 overflow-hidden rounded-md bg-muted ring-1 ring-foreground/10">
+      <div className="relative hidden aspect-[2/3] w-32 shrink-0 overflow-hidden rounded-md bg-muted ring-1 ring-foreground/10 sm:block">
         <Image
           src={film.posterUrl}
           alt={`Póster de ${film.title}`}
@@ -138,9 +177,9 @@ function InfoCard({
           className="object-cover"
         />
       </div>
-      <div className="flex flex-1 flex-col gap-4">
+      <div className="flex flex-1 flex-col gap-3 sm:gap-4">
         <div>
-          <h1 className="font-heading text-2xl font-semibold leading-tight text-foreground">
+          <h1 className="font-heading text-xl font-semibold leading-tight text-foreground sm:text-2xl">
             {film.title}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -154,7 +193,7 @@ function InfoCard({
             </Badge>
           ))}
         </div>
-        <dl className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-3">
+        <dl className="flex flex-col gap-1.5 text-sm sm:grid sm:grid-cols-3 sm:gap-4">
           <InfoField
             icon={<MapPin className="size-4" />}
             label="Sede"
@@ -186,15 +225,22 @@ function InfoField({
   value: string;
 }) {
   return (
-    <div className="flex items-start gap-2">
-      <span aria-hidden className="mt-0.5 text-muted-foreground">
+    <div className="flex items-center gap-2 sm:items-start">
+      <span
+        aria-hidden
+        className="shrink-0 text-muted-foreground sm:mt-0.5"
+      >
         {icon}
       </span>
-      <div>
-        <dt className="text-xs uppercase tracking-widest text-muted-foreground">
+      {/* One line per field on touch: the icon already carries the category,
+          so the uppercase label is redundant there and costs a whole row each.
+          `sr-only` keeps the `<dt>` present for the `<dl>` pairing and for
+          screen readers, which never see the icon. */}
+      <div className="min-w-0">
+        <dt className="sr-only sm:not-sr-only sm:text-xs sm:uppercase sm:tracking-widest sm:text-muted-foreground">
           {label}
         </dt>
-        <dd className="mt-0.5 font-medium text-foreground">{value}</dd>
+        <dd className="font-medium text-foreground sm:mt-0.5">{value}</dd>
       </div>
     </div>
   );

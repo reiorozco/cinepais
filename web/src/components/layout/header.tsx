@@ -23,21 +23,21 @@ type HeaderProps = {
 export function Header({ cities }: HeaderProps) {
   return (
     <header className="bg-brand-header text-white">
-      <div className="mx-auto flex max-w-6xl items-center gap-6 px-6 py-4">
+      <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:gap-6 sm:px-6 sm:py-4">
         <Link
           href="/"
           aria-label="CinePaís — inicio"
           className="shrink-0 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
         >
-          <Wordmark className="h-8 w-auto text-white" />
+          <Wordmark className="h-7 w-auto text-white sm:h-8" />
         </Link>
 
-        <nav aria-label="Principal" className="flex-1">
+        <nav aria-label="Principal" className="min-w-0 flex-1">
           <ul className="flex items-center gap-6">
             <li>
               <Link
                 href="/films"
-                className="text-sm font-medium text-white/85 transition-colors hover:text-white focus-visible:text-white focus-visible:outline-none focus-visible:underline underline-offset-4"
+                className="inline-flex min-h-11 items-center text-sm font-medium text-white/85 transition-colors hover:text-white focus-visible:text-white focus-visible:outline-none focus-visible:underline underline-offset-4"
               >
                 Películas
               </Link>

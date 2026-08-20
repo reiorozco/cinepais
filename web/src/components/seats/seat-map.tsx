@@ -66,6 +66,8 @@ export function SeatMap({
   const [pendingWheelchair, setPendingWheelchair] =
     useState<SeatForSelection | null>(null);
 
+  const scrollerRef = useRef<HTMLDivElement>(null);
+
   const layout = ROOM_LAYOUTS[normalizeRoom(showtime.room)];
   const blocks = layout.blocks as [number, number][];
 
@@ -140,6 +142,17 @@ export function SeatMap({
     dispatch,
   ]);
 
+  // Start the horizontal scroller in the MIDDLE of the room, not at the wall.
+  // The auditorium is wider than a phone viewport, and a left-anchored scroller
+  // shows only the left block — hiding precisely the centre seats the quality
+  // ranking exists to surface. Keyed on the showtime so a client-side
+  // navigation between two rooms re-centres instead of keeping a stale offset.
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    if (scroller === null) return;
+    scroller.scrollLeft = (scroller.scrollWidth - scroller.clientWidth) / 2;
+  }, [showtime.id]);
+
   // Provenance marker: a seat is "pre-selected" only while it is BOTH still
   // selected and part of the request, so deselecting one drops its annotation.
   const preselectedIds: ReadonlySet<string> = useMemo(() => {
@@ -200,7 +213,7 @@ export function SeatMap({
   }
 
   return (
-    <section aria-label="Selección de sillas" className="mt-8">
+    <section aria-label="Selección de sillas" className="mt-6 sm:mt-8">
       {preselectRequest.length > 0 && (
         <PreselectBanner
           appliedCount={preselectedIds.size}
@@ -210,8 +223,8 @@ export function SeatMap({
 
       <Legend />
 
-      <div className="mt-6 rounded-xl bg-surface-dark p-6 text-white">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="mt-4 rounded-xl bg-surface-dark p-4 text-white sm:mt-6 sm:p-6">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3 sm:mb-4">
           <p className="text-xs uppercase tracking-widest text-white/70">
             Sillas · {summary.availableCount} / {summary.totalCount} disponibles
           </p>
@@ -219,34 +232,41 @@ export function SeatMap({
         </div>
 
         {/* Pantalla */}
-        <div className="mx-auto mb-8 max-w-md text-center">
+        <div className="mx-auto mb-5 max-w-md text-center sm:mb-8">
           <div className="mx-auto h-1.5 w-full max-w-sm rounded-full bg-gradient-to-b from-white/50 to-white/10 shadow-[0_0_28px_rgba(255,255,255,0.35)]" />
           <p className="mt-2 text-xs uppercase tracking-widest text-white/60">
             Pantalla
           </p>
         </div>
 
-        {/* Grid: overflow-x on the outer wrapper handles wide rooms + zoom-up */}
-        <div className="overflow-x-auto pb-2">
-          <div
-            className="mx-auto flex origin-top flex-col items-center gap-1.5 transition-transform duration-200"
-            style={{
-              transform: `scale(${zoom})`,
-              width: "fit-content",
-            }}
-          >
-             {Array.from({ length: layout.rows }, (_, i) => i + 1).map((row) => (
-               <SeatRow
-                 key={row}
-                 rowLetter={ROW_LETTERS[row - 1] ?? String(row)}
-                 blocks={blocks}
-                 seatByCol={seatByRowCol.get(row)}
-                 activeIds={activeIds}
-                 preselectedIds={preselectedIds}
-                 onSeatClick={handleSeatClick}
-               />
-            ))}
+        {/* Grid: overflow-x on the scroller handles wide rooms + zoom-up. The
+            wrapper is `relative` so the edge fades stay pinned to the viewport
+            edges of the scroller instead of scrolling away with the room. */}
+        <div className="relative">
+          <div ref={scrollerRef} className="overflow-x-auto pb-2">
+            <div
+              className="mx-auto flex origin-top flex-col items-center gap-1.5 transition-transform duration-200"
+              style={{
+                transform: `scale(${zoom})`,
+                width: "fit-content",
+              }}
+            >
+              {Array.from({ length: layout.rows }, (_, i) => i + 1).map((row) => (
+                <SeatRow
+                  key={row}
+                  rowLetter={ROW_LETTERS[row - 1] ?? String(row)}
+                  blocks={blocks}
+                  seatByCol={seatByRowCol.get(row)}
+                  activeIds={activeIds}
+                  preselectedIds={preselectedIds}
+                  onSeatClick={handleSeatClick}
+                />
+              ))}
+            </div>
           </div>
+
+          <EdgeFade side="left" />
+          <EdgeFade side="right" />
         </div>
       </div>
 
@@ -346,20 +366,30 @@ function PreselectBanner({
 
 function Legend() {
   return (
-    <div
-      role="list"
-      aria-label="Leyenda de sillas"
-      className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-lg border border-border bg-card px-4 py-3 text-sm"
-    >
-      <LegendItem swatchClass="bg-seat-selected" label="Seleccionada" />
-      <LegendItem swatchClass="bg-seat-sold" label="No disponible" />
-      <LegendItem swatchClass="bg-seat-available" label="General" />
-      <LegendItem
-        swatchClass="bg-seat-available"
-        icon={<Accessibility className="size-3 text-white" aria-hidden />}
-        label="Silla de ruedas"
-      />
-      <LegendItem swatchClass="bg-seat-preferential" label="Preferencial" />
+    <div className="rounded-lg border border-border bg-card px-4 py-3">
+      {/* `pr-16` on mobile keeps the last item out of the column the fixed
+          copilot launcher occupies (56px bubble, 16px inset), which otherwise
+          lands on top of the "Preferencial" swatch at some scroll positions. */}
+      <div
+        role="list"
+        aria-label="Leyenda de sillas"
+        className="flex flex-wrap items-center gap-x-5 gap-y-2 pr-16 text-sm sm:pr-0"
+      >
+        <LegendItem swatchClass="bg-seat-selected" label="Seleccionada" />
+        <LegendItem swatchClass="bg-seat-sold" label="No disponible" />
+        <LegendItem swatchClass="bg-seat-available" label="General" />
+        <LegendItem
+          swatchClass="bg-seat-available"
+          icon={<Accessibility className="size-3 text-white" aria-hidden />}
+          label="Silla de ruedas"
+        />
+        <LegendItem swatchClass="bg-seat-preferential" label="Preferencial" />
+      </div>
+
+      <p className="mt-2.5 border-t border-border pt-2.5 text-xs text-muted-foreground">
+        Elige sillas contiguas: una selección no puede dejar una silla sola
+        entre sillas ocupadas.
+      </p>
     </div>
   );
 }
@@ -386,6 +416,33 @@ function LegendItem({
       </span>
       <span className="text-xs text-muted-foreground">{label}</span>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Edge fade — "the room continues past here" affordance
+// ---------------------------------------------------------------------------
+
+/**
+ * Gradient cap over the horizontal seat scroller. The room is wider than a
+ * phone viewport and the scroller has no visible scrollbar on iOS, so without
+ * this the clipped half reads as "there is nothing there".
+ *
+ * The gradient resolves to the panel's own `--surface-dark`, so on a viewport
+ * wide enough to show the whole room it is the background painted over the
+ * background — invisible, with nothing to toggle.
+ */
+function EdgeFade({ side }: { side: "left" | "right" }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "pointer-events-none absolute inset-y-0 w-8 sm:hidden",
+        side === "left"
+          ? "left-0 bg-gradient-to-r from-surface-dark to-transparent"
+          : "right-0 bg-gradient-to-l from-surface-dark to-transparent",
+      )}
+    />
   );
 }
 
@@ -473,7 +530,7 @@ function SeatRow({
                   <span
                     key={col}
                     aria-hidden
-                    className="inline-block h-6 w-6"
+                    className="inline-block size-8 sm:size-6"
                   />
                 );
               }
@@ -554,7 +611,11 @@ function SeatButton({
       disabled={isSold}
       onClick={() => onClick(seat)}
       className={cn(
-        "relative inline-flex size-6 items-center justify-center rounded-t-sm text-[10px] font-medium ring-1 ring-inset ring-black/10 transition-colors outline-none",
+        // 32px on touch, 24px from `sm:`. A mis-tap here does not fail
+        // silently — it picks the wrong seat or trips the orphan rule — so the
+        // grid pays for its density in width (the scroller absorbs it) rather
+        // than in target size.
+        "relative inline-flex size-8 items-center justify-center rounded-t-sm text-[10px] font-medium ring-1 ring-inset ring-black/10 transition-colors outline-none sm:size-6",
         "focus-visible:ring-2 focus-visible:ring-white",
         seatFillClass(seat, selected),
         !isSold &&
@@ -563,7 +624,7 @@ function SeatButton({
         isSold && "cursor-not-allowed opacity-70",
         // Provenance ring. `outline-*` and not `ring-*`: the base ring is
         // `ring-inset`, which tailwind-merge keeps, so an added ring would be
-        // drawn inside the 24px seat instead of around it.
+        // drawn inside the seat instead of around it.
         preselected &&
           "outline-solid outline-2 outline-offset-1 outline-primary",
       )}
@@ -571,7 +632,10 @@ function SeatButton({
       {isWheelchair ? (
         <Accessibility className="size-3.5 text-white" aria-hidden />
       ) : (
-        <span aria-hidden className="text-white/85">
+        /* `text-current` inherits, so `seatFillClass` actually governs. A
+           hardcoded colour here silently defeated the `text-transparent` a
+           sold seat carries, leaving ghost numbers at 1.48:1. */
+        <span aria-hidden className="text-current">
           {seat.col}
         </span>
       )}
@@ -642,8 +706,12 @@ function BottomBar({
             </p>
           </div>
         </div>
+        {/* `h-11` on touch: shadcn new-york's 32px default is tuned for a
+            desktop pointer, and this row sits at the bottom of a phone screen
+            where the thumb is least accurate. Both buttons move together —
+            mismatched heights in one row read as a rendering bug. */}
         <div className="flex gap-2">
-          <Button variant="outline" onClick={onBack}>
+          <Button variant="outline" onClick={onBack} className="h-11 sm:h-8">
             <ArrowLeft aria-hidden />
             Atrás
           </Button>
@@ -651,6 +719,7 @@ function BottomBar({
             disabled={!hasSelection}
             onClick={onCheckout}
             aria-disabled={!hasSelection}
+            className="h-11 flex-1 sm:h-8 sm:flex-none"
           >
             Seleccionar boletas
           </Button>

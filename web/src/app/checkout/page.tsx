@@ -59,7 +59,7 @@ function formatShowtimeDate(businessDate: string): string {
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { showtimeId, selectedSeatIds } = useSelectionState();
+  const { showtimeId, selectedSeatIds, hydrated } = useSelectionState();
 
   const [showtime, setShowtime] = useState<ShowtimeRow | null>(null);
   const [selectedSeats, setSelectedSeats] = useState<SeatRow[]>([]);
@@ -68,12 +68,19 @@ export default function CheckoutPage() {
   const [retryCount, setRetryCount] = useState(0);
   const [confirming, setConfirming] = useState(false);
 
-  // Guard: empty selection → redirect to home
+  // Guard: empty selection → redirect to home.
+  //
+  // Gated on `hydrated`, because a refresh here is the common case on iOS,
+  // where backgrounded tabs are discarded routinely. Without the gate this
+  // effect — a child effect, so it runs BEFORE the provider's restore — fired
+  // on the empty initial state and bounced the visitor home a frame before
+  // their seats came back from sessionStorage.
   useEffect(() => {
+    if (!hydrated) return;
     if (selectedSeatIds.size === 0 && showtimeId === null) {
       router.replace("/");
     }
-  }, [selectedSeatIds, showtimeId, router]);
+  }, [hydrated, selectedSeatIds, showtimeId, router]);
 
   // Fetch seat data from the read API (client-safe endpoint)
   useEffect(() => {
@@ -93,7 +100,9 @@ export default function CheckoutPage() {
       .catch(() => setLoadError(true));
   }, [showtimeId, selectedSeatIds, retryCount]);
 
-  // Render null while the redirect is pending (no flash of content)
+  // Render null while the redirect is pending (no flash of content), and while
+  // the stored selection is still being read back.
+  if (!hydrated) return null;
   if (selectedSeatIds.size === 0 && showtimeId === null) return null;
 
   const sortedSeatIds = [...selectedSeatIds].sort();
@@ -237,9 +246,11 @@ export default function CheckoutPage() {
         Esto es una demo — no se realizará ningún cobro.
       </p>
 
-      {/* Confirm button */}
+      {/* Confirm button. `h-11` on touch — see the same override on the seat
+          map's bottom bar; these are the two highest-stakes taps in the funnel
+          and shadcn new-york's 32px default is a desktop-pointer scale. */}
       <Button
-        className="w-full"
+        className="h-11 w-full sm:h-8"
         onClick={handleConfirm}
         disabled={confirming || selectedSeats.length === 0}
       >

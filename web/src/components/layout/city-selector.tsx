@@ -37,9 +37,12 @@ export function CitySelector({ cities }: CitySelectorProps) {
         if (typeof value === "string") setCity(value);
       }}
     >
+      {/* A real floor, not `min-w-0`: releasing the flex minimum on mobile
+          squeezed the trigger to 67px and rendered "Bogotá" as "Bog", which
+          reads as a rendering bug on the app's primary catalogue filter. */}
       <SelectTrigger
         aria-label="Ciudad"
-        className="min-w-0 sm:min-w-32 border-white/20 bg-transparent text-white hover:bg-white/10 focus-visible:ring-white/30 [&_svg]:text-white/70"
+        className="h-9 min-w-24 shrink-0 border-white/20 bg-transparent text-white hover:bg-white/10 focus-visible:ring-white/30 sm:min-w-32 [&_svg]:text-white/70"
       >
         <SelectValue placeholder="Ciudad" />
       </SelectTrigger>

@@ -68,6 +68,26 @@ const REMAINING_QUERIES_VISIBLE_FROM = 3;
  */
 const COOLDOWN_TICK_MS = 250;
 
+/**
+ * The composer's placeholder is the only instruction telling a visitor what to
+ * type, so when the field is locked it has to say which lock is on: a session
+ * cap clears in a new tab, a daily cap does not, and a cooldown clears itself.
+ */
+function composerPlaceholder({
+  sessionCapped,
+  dailyCapped,
+  coolingDown,
+}: {
+  sessionCapped: boolean;
+  dailyCapped: boolean;
+  coolingDown: boolean;
+}): string {
+  if (dailyCapped) return "Sin cupo de consultas por hoy.";
+  if (sessionCapped) return "Llegaste al límite de esta sesión.";
+  if (coolingDown) return "Espera un momento antes de volver a preguntar…";
+  return "Pregunta por funciones o sillas…";
+}
+
 function remainingQueriesLabel(remaining: number): string {
   if (remaining <= 0) return "No te quedan consultas en esta sesión.";
   if (remaining === 1) return "Te queda 1 consulta en esta sesión.";
@@ -98,6 +118,7 @@ export function CopilotWidget() {
     counters,
     cooldownUntil,
     sessionCapped,
+    dailyCapped,
     send,
   } = useCopilotChat();
   // Wall clock, sampled only while a cooldown runs. Reading `Date.now()` during
@@ -142,8 +163,13 @@ export function CopilotWidget() {
     counters.sessionQueriesUsed >=
       counters.sessionQueryCap - REMAINING_QUERIES_VISIBLE_FROM;
 
-  const canSend =
-    !streaming && !sessionCapped && !coolingDown && draft.trim().length > 0;
+  // Both caps are terminal for this tab and both must lock the composer; the
+  // cooldown is temporary and only blocks sending. They are kept apart because
+  // a disabled-but-recoverable field wants different copy from a spent one.
+  const capped = sessionCapped || dailyCapped;
+  const composerDisabled = capped || coolingDown;
+
+  const canSend = !streaming && !composerDisabled && draft.trim().length > 0;
 
   // Escape closes the panel. Bound only while open, removed on close/unmount.
   useEffect(() => {
@@ -194,6 +220,11 @@ export function CopilotWidget() {
   useEffect(() => {
     const body = bodyRef.current;
     if (body === null || !followingRef.current) return;
+    // The empty state is not a conversation. Pinning it to its bottom scrolled
+    // the sparkle avatar and the "what is this?" line clean out of view (157px
+    // hidden on mobile, 104px on desktop) and opened the panel on a clipped
+    // suggestion chip — the copilot's entire first impression, discarded.
+    if (messages.length === 0) return;
     body.scrollTop = body.scrollHeight;
   });
 
@@ -230,7 +261,7 @@ export function CopilotWidget() {
   }
 
   function handleSuggestion(suggestion: string) {
-    if (streaming || sessionCapped || coolingDown) return;
+    if (streaming || composerDisabled) return;
     send(suggestion);
     setDraft("");
   }
@@ -279,7 +310,7 @@ export function CopilotWidget() {
               size="icon-sm"
               aria-label="Cerrar el copiloto de CinePaís"
               onClick={() => setOpen(false)}
-              className="text-white/70 hover:bg-white/10 hover:text-white"
+              className="size-11 shrink-0 text-white/70 hover:bg-white/10 hover:text-white sm:size-7"
             >
               <X aria-hidden />
             </Button>
@@ -294,7 +325,7 @@ export function CopilotWidget() {
             {messages.length === 0 ? (
               <EmptyState
                 onPick={handleSuggestion}
-                disabled={streaming || sessionCapped || coolingDown}
+                disabled={streaming || composerDisabled}
               />
             ) : (
               messages.map((message) => (
@@ -324,10 +355,15 @@ export function CopilotWidget() {
               </p>
             ) : null}
 
+            {/* No extra notice for the daily cap: the agent's own Spanish
+                message is already rendered verbatim in the bubble directly
+                above, and repeating it here would say the same thing twice.
+                What was missing was the lock, not the copy. */}
+
             {/* No live region on purpose: announcing a value that changes every
                 second would talk over everything else a screen reader is
                 saying. The lock itself is conveyed by the disabled control. */}
-            {coolingDown && !sessionCapped ? (
+            {coolingDown && !capped ? (
               <p
                 data-copilot-cooldown=""
                 className="rounded-lg bg-white/5 px-3 py-2 text-[0.7rem] leading-relaxed text-white/60"
@@ -358,16 +394,19 @@ export function CopilotWidget() {
                 rows={1}
                 value={draft}
                 maxLength={2000}
-                disabled={sessionCapped}
+                // Disabled during a cooldown too: `submitDraft` already
+                // refused Enter there, but silently — the field looked live
+                // and swallowed the keystroke with no feedback at all.
+                disabled={composerDisabled}
                 onChange={(event) => setDraft(event.target.value)}
                 onKeyDown={handleComposerKeyDown}
-                placeholder={
-                  sessionCapped
-                    ? "Llegaste al límite de esta sesión."
-                    : "Pregunta por funciones o sillas…"
-                }
+                placeholder={composerPlaceholder({
+                  sessionCapped,
+                  dailyCapped,
+                  coolingDown,
+                })}
                 aria-label="Escribe tu pregunta para el copiloto"
-                className="max-h-24 min-h-9 flex-1 resize-none overflow-y-auto rounded-lg bg-white/5 px-3 py-2 text-sm leading-snug text-white outline-none ring-1 ring-white/10 placeholder:text-white/35 focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50"
+                className="max-h-24 min-h-11 flex-1 resize-none overflow-y-auto rounded-lg bg-white/5 px-3 py-2 text-sm leading-snug text-white outline-none ring-1 ring-white/10 placeholder:text-white/55 focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50 sm:min-h-9"
               />
 
               <Button
@@ -376,7 +415,7 @@ export function CopilotWidget() {
                 data-copilot-send=""
                 disabled={!canSend}
                 aria-label="Enviar la pregunta al copiloto"
-                className="shrink-0"
+                className="size-11 shrink-0 sm:size-9"
               >
                 <SendHorizontal aria-hidden />
               </Button>
