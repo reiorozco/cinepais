@@ -3,20 +3,59 @@ import { HeroCarousel } from "@/components/home/hero-carousel";
 import { FilmCard } from "@/components/films/film-card";
 import { EmptyState } from "@/components/ui-states/empty-state";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { Film } from "@/lib/api/schemas";
+
+type FilmTab = {
+  /** Catalogue status this tab shows. Also the tab's `value`. */
+  status: Film["status"];
+  label: string;
+  /** Copy for the genuine "this status has no films" case. */
+  emptyTitle: string;
+  emptyDescription: string;
+};
+
+/**
+ * The three catalogue tabs, in display order. Each one is a pure projection of
+ * `film.status` — the same field `FilmCard` derives its badge from, so a card
+ * can never appear under a tab its badge contradicts, and no film can show up
+ * under two tabs.
+ */
+const FILM_TABS: readonly FilmTab[] = [
+  {
+    status: "cartelera",
+    label: "Cartelera",
+    emptyTitle: "Aún no hay funciones",
+    emptyDescription:
+      "Vuelve pronto o cambia de ciudad para ver la cartelera disponible.",
+  },
+  {
+    status: "pronto",
+    label: "Pronto",
+    emptyTitle: "Aún no hay próximos estrenos",
+    emptyDescription:
+      "Estamos preparando los estrenos que vienen. Vuelve pronto para verlos aquí.",
+  },
+  {
+    status: "preventa",
+    label: "Preventa",
+    emptyTitle: "Aún no hay preventas abiertas",
+    emptyDescription:
+      "Cuando abramos la venta anticipada de un estreno, aparecerá en esta pestaña.",
+  },
+];
 
 /**
  * Home / landing page.
  *
  * Server Component: fetches films directly via `getFilms()` (which wraps
- * Prisma) so no client-side data-fetching is required. The first 3 films
- * seed the hero carousel; the full list backs the "Cartelera" tab. "Pronto"
- * and "Preventa" tabs are wired but empty in Fase 1 — the seed does not
- * distinguish upcoming vs. presale titles yet, so both render an
- * `EmptyState` placeholder to keep the layout coherent.
+ * Prisma) so no client-side data-fetching is required. The first 3 films seed
+ * the hero carousel; the rest are split across the three tabs by `film.status`.
  *
- * City filtering is deliberately client-side only (see `CityProvider`),
- * so this render always fetches the full list and lets downstream detail
- * pages narrow by city.
+ * `getFilms()` is deliberately called with **no city argument**: it filters on
+ * `showtimes.some.site.city`, and a `pronto` film has zero showtimes by
+ * construction, so passing the selected city would silently empty the Pronto
+ * tab. City filtering stays client-side (see `CityProvider`) and downstream
+ * detail pages narrow by city.
  */
 export default async function Home() {
   const films = await getFilms();
@@ -36,37 +75,42 @@ export default async function Home() {
           </p>
         </header>
 
-        <Tabs defaultValue="cartelera">
+        <Tabs defaultValue={FILM_TABS[0].status}>
           <TabsList>
-            <TabsTrigger value="cartelera">Cartelera</TabsTrigger>
-            <TabsTrigger value="pronto">Pronto</TabsTrigger>
-            <TabsTrigger value="preventa">Preventa</TabsTrigger>
+            {FILM_TABS.map((tab) => (
+              <TabsTrigger key={tab.status} value={tab.status}>
+                {tab.label}
+              </TabsTrigger>
+            ))}
           </TabsList>
 
-          <TabsContent value="cartelera" className="mt-6">
-            {films.length === 0 ? (
-              <EmptyState
-                title="Aún no hay funciones"
-                description="Vuelve pronto o cambia de ciudad para ver la cartelera disponible."
-              />
-            ) : (
-              <ul className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-                {films.map((film, index) => (
-                  <li key={film.id}>
-                    <FilmCard film={film} priority={index < 6} />
-                  </li>
-                ))}
-              </ul>
-            )}
-          </TabsContent>
+          {FILM_TABS.map((tab, tabIndex) => {
+            const tabFilms = films.filter((film) => film.status === tab.status);
 
-          <TabsContent value="pronto" className="mt-6">
-            <EmptyState />
-          </TabsContent>
-
-          <TabsContent value="preventa" className="mt-6">
-            <EmptyState />
-          </TabsContent>
+            return (
+              <TabsContent key={tab.status} value={tab.status} className="mt-6">
+                {tabFilms.length === 0 ? (
+                  <EmptyState
+                    title={tab.emptyTitle}
+                    description={tab.emptyDescription}
+                  />
+                ) : (
+                  <ul className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+                    {tabFilms.map((film, index) => (
+                      <li key={film.id}>
+                        {/* Only the default tab is painted on first load, so it
+                            is the only one whose posters can affect LCP. */}
+                        <FilmCard
+                          film={film}
+                          priority={tabIndex === 0 && index < 6}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </TabsContent>
+            );
+          })}
         </Tabs>
       </section>
     </main>

@@ -1,3 +1,4 @@
+import type { ComponentProps } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -13,16 +14,37 @@ type FilmCardProps = {
   priority?: boolean;
 };
 
+type BadgeVariant = ComponentProps<typeof Badge>["variant"];
+
+/**
+ * Marketing badge per catalogue status — the single source of truth shared with
+ * the home tabs, which group films by the very same `film.status` field.
+ *
+ * Typed as a total `Record` on purpose: adding a value to `FilmStatusSchema`
+ * breaks this map at compile time instead of silently rendering no badge.
+ *
+ * `pronto` titles are not purchasable yet, so they get the quietest variant and
+ * must not compete with the two states that can actually convert.
+ */
+const STATUS_BADGE: Record<
+  Film["status"],
+  { label: string; variant: BadgeVariant }
+> = {
+  cartelera: { label: "Estreno", variant: "default" },
+  preventa: { label: "Preventa", variant: "secondary" },
+  pronto: { label: "Pronto", variant: "outline" },
+};
+
 /**
  * Poster card used in the cartelera grid.
  *
  * Server component: no interactivity beyond the wrapping `<Link>`, which
- * navigates to the film detail route. The Estreno / Preventa badge is
- * derived from the film id suffix (`01..06` = Estreno, `09..10` = Preventa)
- * per Fase 1 seed conventions — nothing else about the card is dynamic.
+ * navigates to the film detail route. The Estreno / Preventa / Pronto badge is
+ * derived from `film.status` — the same field the home page filters its tabs
+ * on, so a card can never advertise a state its tab contradicts.
  */
 export function FilmCard({ film, priority = false }: FilmCardProps) {
-  const badge = badgeForFilmId(film.id);
+  const badge = STATUS_BADGE[film.status];
   const genresLabel = film.genres.join(" · ");
 
   return (
@@ -40,14 +62,12 @@ export function FilmCard({ film, priority = false }: FilmCardProps) {
           className="object-cover transition-transform duration-300 group-hover/film-card:scale-[1.02]"
           priority={priority}
         />
-        {badge ? (
-          <Badge
-            variant={badge === "Estreno" ? "default" : "secondary"}
-            className="absolute left-2 top-2 shadow-sm"
-          >
-            {badge}
-          </Badge>
-        ) : null}
+        <Badge
+          variant={badge.variant}
+          className="absolute left-2 top-2 shadow-sm"
+        >
+          {badge.label}
+        </Badge>
       </div>
 
       <div className="mt-3 space-y-1">
@@ -65,19 +85,4 @@ export function FilmCard({ film, priority = false }: FilmCardProps) {
       </div>
     </Link>
   );
-}
-
-/**
- * Derive the marketing badge from a film id. Seed data uses `film-01`
- * through `film-10`; the last two characters identify the slot.
- *
- * - `01`–`06` → "Estreno" (marketing-heavy releases in the hero carousel + top of grid)
- * - `09`–`10` → "Preventa" (advance-sales, not yet in theatres)
- * - `07`–`08` → no badge (regular catalog)
- */
-function badgeForFilmId(id: string): "Estreno" | "Preventa" | null {
-  const suffix = id.slice(-2);
-  if (["01", "02", "03", "04", "05", "06"].includes(suffix)) return "Estreno";
-  if (["09", "10"].includes(suffix)) return "Preventa";
-  return null;
 }

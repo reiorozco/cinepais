@@ -436,7 +436,7 @@ crossed anyway, F1 must report it as a deviation rather than absorb it.
 
 ### Wave 3 — Web: rendering, city awareness, and the tabs (local)
 
-- [ ] 15. `web/src/components/copilot/`: a minimal, dependency-free Markdown renderer (D1, web half)
+- [x] 15. `web/src/components/copilot/`: a minimal, dependency-free Markdown renderer (D1, web half)
   - **Precondition (step 0):** assert `test -f .omo/evidence/wave-2-closed-cinepais-phase-5-refinement.txt` — STOP if absent. **This wave opens in a FRESH session, so the dev server from Wave 2 is gone.** Start it and poll before any browser or curl step in this wave:
     ```bash
     mkdir -p /tmp/omo-p5
@@ -452,7 +452,7 @@ crossed anyway, F1 must report it as a deviation rather than absorb it.
   - **QA — a new unit-test file, each case named:** (happy) `"**hola**"` → a `<strong>` element containing `hola`; (happy) a `- ` list → a `<ul>` with one `<li>` per item; (happy) blank-line separated text → separate paragraphs; (**streaming**, the important one) a **partial** input mid-token — `"Encontré **2 sillas"` with the bold unterminated — renders without throwing and without swallowing the visible text, because tokens arrive one at a time via `use-copilot-chat.ts:278-284`; (failure) input containing `<script>alert(1)</script>` renders as **literal text**, never as an element — assert on the rendered text content; (failure) an unsupported construct like a `|table|` row renders literally rather than being dropped.
   - **Evidence:** `task-15-…txt` with every test name, plus a screenshot of the rendered bubble if the dev server is up.
 
-- [ ] 16. `web/src/{components/copilot,lib/agent}/`: send the selected city to the agent (F2, web half)
+- [x] 16. `web/src/{components/copilot,lib/agent}/`: send the selected city to the agent (F2, web half)
   - **Why:** `client.ts:110` sends literally `JSON.stringify({ message, sessionId })`. The widget never calls `useCity()`, even though `city-provider.tsx` exposes it (localStorage key `cinepais.city`, default `"Bogotá"`).
   - **⚠️ Both halves must ship together or this is a silent no-op** — Pydantic v2 ignores unknown fields, so if Todo 5's `ChatRequest` change were missing, the field would be dropped with no error. Confirm Todo 5 is present on this branch before starting: `grep -c "city" agent/src/cinepais_agent/main.py` → ≥ 1.
   - **Do:** read the selected city via `useCity()` in the copilot chat hook and include it in the `POST /chat` body through `streamChat`. Keep it **optional end to end** so a missing city degrades to today's behaviour rather than erroring.
@@ -460,14 +460,14 @@ crossed anyway, F1 must report it as a deviation rather than absorb it.
   - **QA:** (happy) a unit test asserting the request body contains the city currently held by the provider; (failure) with the provider absent or the city empty, the body still parses and omits the field rather than sending `null`/`undefined` — the agent must see a well-formed request either way; (integration, offline) assert the serialized body shape matches exactly what `ChatRequest` accepts, quoting the Pydantic model.
   - **Evidence:** `task-16-…txt` with the serialized body from both cases.
 
-- [ ] 17. `web/src/app/page.tsx` + `web/src/components/films/film-card.tsx`: wire the three tabs to `status` and retire the id-suffix hack (D4)
+- [x] 17. `web/src/app/page.tsx` + `web/src/components/films/film-card.tsx`: wire the three tabs to `status` and retire the id-suffix hack (D4)
   - **Why:** `page.tsx` renders `<EmptyState />` **unconditionally** for Pronto and Preventa, while `film-card.tsx:78-83` derives the badge from `id.slice(-2)`. Two different sources — hence the incoherence the user reported.
   - **Do:** filter each tab on `film.status`, and derive the badge from the **same field**. **Delete `badgeForFilmId()` entirely** — leaving it would preserve the drift. Keep the `EmptyState` component for the genuine case where a status has no films.
   - **Accept:** **`grep -rl "badgeForFilmId" web/src --exclude-dir=generated | wc -l` → `0`** (⚠️ use `-rl … | wc -l`, never `grep -rc` on a directory — that prints one count line per file, dozens of them, and cannot equal a bare `0`; positive control: `grep -rl "status" web/src/components/films/film-card.tsx | wc -l` → ≥ 1) · `grep -rl "slice(-2)" web/src --exclude-dir=generated | wc -l` → `0` · `pnpm lint`, `npx tsc --noEmit` and `pnpm build` exit 0.
   - **QA (browser, dev server up):** (happy) each of the three tabs shows a non-empty, **disjoint** set of films, and every card's badge matches the tab it appears under — screenshot all three; (failure) confirm no film appears under two tabs, and that a status with zero films still renders `EmptyState` rather than a broken layout.
   - **Evidence:** `task-17-…png` ×3 + `task-17-…txt`.
 
-- [ ] 18. **Wave 3 close — HARD GATE. Do not start Todo 19 in this session.**
+- [x] 18. **Wave 3 close — HARD GATE. Do not start Todo 19 in this session.**
   - **Do:** **the standard gate** in order, including **`bash web/scripts/reseed.sh` after `pnpm test` and before `pnpm build`**. Write `.omo/handoff-fase-f-wave-3.md` and **stage it into this commit**.
   - **🔴 Skipping the re-seed here would also corrupt this wave's own evidence:** Todo 17's three-tab screenshots and `pnpm build`'s static prerender of `/` both read the database, so building on a wiped catalogue produces an empty homepage that looks like a Todo 17 bug rather than a missing re-seed.
   - **Commit:** `feat(web): render copilot markdown, send the selected city, wire the catalogue tabs`

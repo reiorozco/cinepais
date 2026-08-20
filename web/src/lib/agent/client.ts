@@ -21,6 +21,13 @@ import { createSseParser } from "./sse";
 export type StreamChatOptions = {
   message: string;
   sessionId: string;
+  /**
+   * The city the user has selected, used by the agent as a search anchor.
+   *
+   * Optional in both directions. `null`/`undefined`/blank are all "not known"
+   * and drop the key from the body entirely — see {@link buildChatRequestBody}.
+   */
+  city?: string | null;
   signal?: AbortSignal;
   onEvent: (event: AgentEvent) => void;
 };
@@ -96,9 +103,45 @@ async function buildHttpErrorEvent(response: Response): Promise<ErrorEvent> {
   };
 }
 
+/**
+ * Serialize the `POST /chat` body against the agent's `ChatRequest`
+ * (`agent/src/cinepais_agent/main.py:126-133`):
+ *
+ * ```python
+ * class ChatRequest(BaseModel):
+ *     message: str
+ *     sessionId: Annotated[str, Field(min_length=1, max_length=128)]
+ *     city: str | None = None
+ * ```
+ *
+ * An unknown city omits the key rather than sending `city: null`. Both parse,
+ * but omission is the only shape that also satisfies an agent deployed *before*
+ * the field existed — and `JSON.stringify` drops `undefined` values silently,
+ * so writing `{ city }` unconditionally would look correct while making the
+ * two cases indistinguishable from this side.
+ *
+ * The value is passed through as typed apart from trimming: `sse.sanitize_city`
+ * is the agent's gate (≤64 chars, letters/spaces/accents, dropped silently
+ * otherwise), and duplicating that rule here would create a second, drifting
+ * copy of it. Exported so the wire shape can be asserted without a network.
+ */
+export function buildChatRequestBody({
+  message,
+  sessionId,
+  city,
+}: Pick<StreamChatOptions, "message" | "sessionId" | "city">): string {
+  const trimmedCity = city?.trim();
+  return JSON.stringify({
+    message,
+    sessionId,
+    ...(trimmedCity ? { city: trimmedCity } : {}),
+  });
+}
+
 export async function streamChat({
   message,
   sessionId,
+  city,
   signal,
   onEvent,
 }: StreamChatOptions): Promise<void> {
@@ -107,7 +150,7 @@ export async function streamChat({
     response = await fetch(`${AGENT_BASE_URL}/chat`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ message, sessionId }),
+      body: buildChatRequestBody({ message, sessionId, city }),
       signal,
     });
   } catch (error) {

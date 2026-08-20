@@ -75,8 +75,19 @@ export function CityProvider({ children }: { children: ReactNode }) {
 // Hook
 // ---------------------------------------------------------------------------
 
+/**
+ * Same read as {@link useCity}, but `null` instead of a throw when no provider
+ * is above. Use it only where the city is an optional hint — the copilot sends
+ * it to the agent as a soft anchor — so an absent provider costs the hint
+ * rather than the whole subtree. Everywhere the city is the point, throwing is
+ * the correct behaviour and {@link useCity} is the hook.
+ */
+export function useOptionalCity(): CityContextValue | null {
+  return useContext(CityContext);
+}
+
 export function useCity(): CityContextValue {
-  const ctx = useContext(CityContext);
+  const ctx = useOptionalCity();
   if (!ctx) throw new Error("useCity must be used inside CityProvider");
   return ctx;
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { useOptionalCity } from "@/components/providers/city-provider";
 import { streamChat } from "@/lib/agent/client";
 import type { AgentEvent, RecommendationEvent } from "@/lib/agent/events";
 
@@ -192,6 +193,11 @@ export function useCopilotChat(): CopilotChat {
   const [cooldownUntil, setCooldownUntil] = useState<number | null>(null);
   const [sessionCapped, setSessionCapped] = useState(false);
 
+  // `useOptionalCity`, not `useCity`: the city is a search anchor the agent
+  // treats as optional, so a widget mounted outside `CityProvider` must lose
+  // the anchor rather than throw and take the whole panel down with it.
+  const cityContext = useOptionalCity();
+
   const abortRef = useRef<AbortController | null>(null);
   const sessionIdRef = useRef<string | null>(null);
   // Monotonic turn number. Events from a superseded turn are dropped rather
@@ -337,6 +343,9 @@ export function useCopilotChat(): CopilotChat {
     void streamChat({
       message,
       sessionId: ensureSessionId(),
+      // Read at send time, not at mount: the header's selector can change the
+      // city between two turns of the same conversation.
+      city: cityContext?.city ?? null,
       signal: controller.signal,
       onEvent: handleEvent,
     });

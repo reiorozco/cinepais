@@ -11,6 +11,7 @@ import {
 import { usePathname } from "next/navigation";
 import { SendHorizontal, Sparkles, X } from "lucide-react";
 
+import { MarkdownLite } from "@/components/copilot/markdown-lite";
 import { RecommendationCard } from "@/components/copilot/recommendation-card";
 import {
   RATE_LIMIT_COOLDOWN_MS,
@@ -469,6 +470,13 @@ function EmptyState({
  * only when there is text: tool-only turns carry a recommendation and no
  * `token` events at all, and an empty bubble there would be a rendering
  * artifact rather than an answer.
+ *
+ * The assistant bubble is a `<div>`, not a `<p>` — `MarkdownLite` can emit a
+ * `<ul>`, and a `<ul>` inside a `<p>` is invalid nesting that the browser
+ * silently repairs by closing the paragraph early. `whitespace-pre-wrap` moved
+ * with it, onto the text nodes the renderer produces. The user bubble stays a
+ * plain `<p>`: what a person typed is text, and parsing it would be a way to
+ * make their own input surprise them.
  */
 function MessageRow({ message }: { message: ChatMessage }) {
   if (message.role === "user") {
@@ -496,17 +504,17 @@ function MessageRow({ message }: { message: ChatMessage }) {
       className="flex flex-col gap-2"
     >
       {message.content.length > 0 ? (
-        <p
+        <div
           data-copilot-text=""
           className={cn(
-            "max-w-[92%] whitespace-pre-wrap rounded-2xl rounded-bl-sm px-3 py-2 text-sm leading-relaxed",
+            "max-w-[92%] space-y-2 rounded-2xl rounded-bl-sm px-3 py-2 text-sm leading-relaxed",
             message.variant === "error"
               ? "bg-destructive/10 text-white/85 ring-1 ring-destructive/35"
               : "bg-white/5 text-white/85",
           )}
         >
-          {message.content}
-        </p>
+          <MarkdownLite text={message.content} />
+        </div>
       ) : null}
 
       {message.hint !== null ? (
