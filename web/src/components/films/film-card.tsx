@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import type { Film } from "@/lib/api/schemas";
+import { cn } from "@/lib/utils";
 
 type FilmCardProps = {
   film: Film;
@@ -31,11 +32,20 @@ type BadgeVariant = ComponentProps<typeof Badge>["variant"];
  */
 export const STATUS_BADGE: Record<
   Film["status"],
-  { label: string; variant: BadgeVariant }
+  { label: string; variant: BadgeVariant; className?: string }
 > = {
   cartelera: { label: "Estreno", variant: "default" },
   preventa: { label: "Preventa", variant: "secondary" },
-  pronto: { label: "Pronto", variant: "outline" },
+  // `outline` has no background, so its text resolves to the page's
+  // `--foreground` — but this badge sits ON the poster, and posters are dark on
+  // every page (home rendered it at ~1.3:1; `/films` only passed because it
+  // overrides that token). So it carries contrast locally, as `default` and
+  // `secondary` already do, with a veil quiet enough not to read as purchasable.
+  pronto: {
+    label: "Pronto",
+    variant: "outline",
+    className: "border-white/30 bg-black/45 text-white backdrop-blur-[2px]",
+  },
 };
 
 /**
@@ -67,7 +77,7 @@ export function FilmCard({ film, priority = false }: FilmCardProps) {
         />
         <Badge
           variant={badge.variant}
-          className="absolute left-2 top-2 shadow-sm"
+          className={cn("absolute left-2 top-2 shadow-sm", badge.className)}
         >
           {badge.label}
         </Badge>
