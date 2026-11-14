@@ -19,16 +19,15 @@ logger = logging.getLogger(__name__)
 
 # Priority chain — ordered by validated availability first, cost second.
 # gemini-3.6-flash leads: it is the newest full Flash model and was validated end-to-end here
-# (one live /chat run emitting a recommendation event with the soldout tradeoff —
-# .omo/evidence/task-17-cinepais-phase-2-agent-fixes.md). Any future head-of-chain swap needs
-# its own E2E proof, not just presence in models.list(); see the Lite failure modes below for
-# why "the model exists" is not evidence that it calls tools.
+# (one live /chat run emitting a recommendation event with the soldout tradeoff). Any future
+# head-of-chain swap needs its own E2E proof, not just presence in models.list(); see the Lite
+# failure modes below for why "the model exists" is not evidence that it calls tools.
 # gemini-3.5-flash stays directly behind it as the previously proven fallback.
 # gemini-2.x and gemini-2.5-flash are deprecated for new API keys.
 # The 2.5 Lite variant is removed outright: it still appears in models.list() but every call
-# 404s (.omo/evidence/task-9-cinepais-phase-2-agent.md:56), and _discover_model_via_list()
-# would pick it and return before the per-candidate invoke probe could ever recover (line 108
-# short-circuits on the first truthy result).
+# 404s (reproduced in the round-5 evals), and _discover_model_via_list() would pick it and
+# return before the per-candidate invoke probe could ever recover (line 108 short-circuits on
+# the first truthy result).
 # gemini-3.5-flash-lite is cheaper on output tokens but broke tool-calling in round-5 evals
 # (never called recommend_best, 2/2 reproducible), so it is demoted to a last-resort tail
 # entry — reachable only if no full Flash model is available at all.

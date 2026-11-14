@@ -170,7 +170,7 @@ Google Cloud Console → Billing → Budgets & alerts → **Spend Cap** (Public 
 
 This is a manual, optional step — the agent does not configure it automatically.
 
-**Measured eval cost**: see `.omo/evidence/task-8-cinepais-phase-2-agent-fixes.md` for the actual token usage from the eval suite run (estimated — usage_metadata unavailable).
+**Measured eval cost**: the eval suite's token usage was measured once against the live model — an estimate, because Gemini returned no `usage_metadata`.
 
 ## Troubleshooting
 
@@ -192,7 +192,7 @@ The agent discovers the best available Gemini model at startup:
 
 The chosen model is logged at startup as `Using model: <id>` (or `Using AGENT_MODEL_OVERRIDE: <id>`) and recorded in eval evidence. `main.py` calls `logging.basicConfig(level=logging.INFO)` at import so these records survive under uvicorn, which otherwise configures only its own `uvicorn.*` loggers — that line is what makes "which model is this box running?" answerable from the Fly.io logs.
 
-**Why 3.6 and not 3.5?** `gemini-3.6-flash` is the newest full Flash model and was validated end-to-end here (live `/chat` run emitting a `recommendation` event with the soldout tradeoff — `.omo/evidence/task-17-cinepais-phase-2-agent-fixes.md`). `gemini-3.5-flash` remains directly behind it as the previously proven fallback. Promoting a new model to the head of the chain requires its own E2E proof; presence in `models.list()` is not evidence that it calls tools.
+**Why 3.6 and not 3.5?** `gemini-3.6-flash` is the newest full Flash model and was validated end-to-end here (a live `/chat` run emitting a `recommendation` event with the soldout tradeoff). `gemini-3.5-flash` remains directly behind it as the previously proven fallback. Promoting a new model to the head of the chain requires its own E2E proof; presence in `models.list()` is not evidence that it calls tools.
 
 **Why Flash and not Lite?** `gemini-3.5-flash-lite` broke tool-calling — it never called `recommend_best`, so no `recommendation` event was emitted (2/2 reproducible). It stays in the chain only as a last-resort tail entry. The 2.5 Lite variant was removed entirely: it appears in `models.list()` but every call returns 404, and step 2 would select it and return before step 3 could recover.
 

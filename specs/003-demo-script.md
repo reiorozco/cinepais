@@ -248,14 +248,15 @@ frame final para el GIF.
 
 ## 6. Encuadre — referencias reales del repo
 
-Tres capturas ya existentes muestran el encuadre que hay que reproducir en el plano 17. Abrirlas
-antes de grabar:
+Tres capturas de trabajo fijan el encuadre que hay que reproducir en el plano 17. Son artefactos
+locales del rodaje, fuera del repo (`evidence/` en la carpeta de trabajo); si ya no están, la regla
+del final de la sección basta:
 
 | Captura | Qué enseña |
 |---|---|
-| [`.omo/evidence/task-14-hitl-money-shot.png`](../.omo/evidence/task-14-hitl-money-shot.png) | **El encuadre a imitar.** ~16:9. Panel del copiloto ocupando ~40 % a la derecha, mapa completo (filas A–L) legible a la izquierda, banner de pre-selección arriba y el pie con el total abajo. Tarjeta y sillas verdes en un mismo cuadro |
-| [`.omo/evidence/task-16-live-hitl.png`](../.omo/evidence/task-16-live-hitl.png) | Mismo momento con la tarjeta ya con badge `Recomendado` y las etiquetas `IMAX` / `ZONA ÓPTIMA`. **Aviso:** aquí el panel se come ~45 % y el mapa queda cortado en la fila G — es el error de encuadre a evitar |
-| [`.omo/evidence/task-31-cinepais-phase-4-deploy.png`](../.omo/evidence/task-31-cinepais-phase-4-deploy.png) | El mismo plano contra el sitio **desplegado**, con 4 sillas pre-seleccionadas. Referencia de cómo se ve en producción |
+| `hitl-money-shot` | **El encuadre a imitar.** ~16:9. Panel del copiloto ocupando ~40 % a la derecha, mapa completo (filas A–L) legible a la izquierda, banner de pre-selección arriba y el pie con el total abajo. Tarjeta y sillas verdes en un mismo cuadro |
+| `live-hitl` | Mismo momento con la tarjeta ya con badge `Recomendado` y las etiquetas `IMAX` / `ZONA ÓPTIMA`. **Aviso:** aquí el panel se come ~45 % y el mapa queda cortado en la fila G — es el error de encuadre a evitar |
+| `deploy-hitl` | El mismo plano contra el sitio **desplegado**, con 4 sillas pre-seleccionadas. Referencia de cómo se ve en producción |
 
 Regla de encuadre que sale de comparar las tres: **si el mapa de sillas queda cortado, el plano está
 mal**. Bajar el zoom del mapa a `0.75×` antes que perder filas.
@@ -267,9 +268,8 @@ mal**. Bajar el zoom del mapa a `0.75×` antes que perder filas.
 - **Máximo 2 llamadas `POST /chat` en todo el rodaje.** Una toma con la Consulta A, una de repuesto
   con la B. No hay tercera.
 - **Anunciar antes de cada llamada.** Es el único paso del rodaje que cuesta dinero.
-- **Después de cada llamada, añadir una línea** a `.omo/evidence/llm-spend-cinepais-phase-4-deploy.txt`,
-  con el mismo formato que las entradas ya existentes (timestamp · todo · endpoint · host · COLD/WARM ·
-  consulta · status · duración · outcome).
+- **Después de cada llamada, anotar una línea** en el registro local de gasto del rodaje
+  (timestamp · endpoint · host · COLD/WARM · consulta · status · duración · outcome).
 - El agente tiene además un tope propio de **40 `/chat` por día UTC**, un límite por IP y un tope por
   sesión. Nada de esto debería activarse en un rodaje de dos llamadas; si aparece un mensaje de tope,
   detenerse y revisar qué más está pegándole al agente.
@@ -301,8 +301,6 @@ acordeón de sedes, los dos mapas de sillas, checkout y confirmación. Las cifra
 (`40 / 260`, filas A y B, resto apagado) son una lectura del DOM desplegado, no una estimación.
 Los dos escenarios plantados que el guion menciona como coordenadas (`front-only` y `soldout`) se
 verificaron contra la API de lectura, con los ids resueltos en tiempo de ejecución.
-
-Transcripciones y códigos de salida: `.omo/evidence/task-34-cinepais-phase-4-deploy.txt`.
 
 El guion está al día con la realidad enviada a producción: pestañas de catálogo funcionando, sillas
 del copiloto centradas por el ranking (no la esquina lateral) y ocupación realista en las salas

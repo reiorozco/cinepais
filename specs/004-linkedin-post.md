@@ -35,9 +35,9 @@ no existe, ofrece la mejor alternativa disponible — nunca un "no hay
 nada". Ese balance entre experiencia del cliente y conversión es, para
 mí, el corazón del ejercicio.
 
-Todo el proceso de orquestación (cómo planifiqué y ejecuté las fases del
-proyecto con agentes) queda visible en el repo, en `.omo/` — una decisión
-deliberada de transparencia, no un detalle que se esconde.
+La especificación, las reglas de negocio y el plan por fases están
+versionados en el repo, en `specs/`, escritos antes que el código. Se
+puede leer qué decidí y por qué, no solo qué quedó compilando.
 
 Honestidad ante todo: los datos son mock (determinísticos, sembrados),
 "CinePaís" es una marca ficticia, y no se conecta a ningún API real de

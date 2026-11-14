@@ -22,26 +22,15 @@ web/src/generated/
 # Build artifacts
 coverage/
 
-# Atlas / orchestrator state
-.omo/evidence/
+# Orchestrator working state. Kept out of the repo entirely: `specs/` is the durable record of
+# what was decided and why, and it is the only one written to be read by someone else.
+.omo/
 
 # Playwright MCP snapshots
 .playwright-mcp/
 
 # Temporary screenshots
 initial-load.png
-
-# Orchestrator run-continuation state
-.omo/run-continuation/
-
-# Orchestrator notepads (scratch state)
-.omo/notepads/
-
-# Orchestrator start-work audit trail
-.omo/start-work/
-
-# Orchestrator runtime state (session bookkeeping, not a curated artifact)
-.omo/boulder.json
 
 # OS
 .DS_Store

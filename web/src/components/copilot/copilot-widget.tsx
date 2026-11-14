@@ -95,7 +95,7 @@ function remainingQueriesLabel(remaining: number): string {
 }
 
 /**
- * Openers aimed at the four planted seed scenarios (`.omo/handoff-fase-c.md`):
+ * Openers aimed at the four planted seed scenarios (see `web/prisma/seed.ts`):
  * a sold-out IMAX function, the front-rows-only one, the wide-open optimal
  * rows, and a checkerboard 2D room with no three contiguous seats. Titles are
  * real seed films — "Sombras del Puente" (film-02) and "La Odisea" (film-01).

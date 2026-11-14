@@ -67,9 +67,8 @@ Definir/estabilizar este contrato en la **Sesión A**. Con eso, **UI (B)** y **a
 **Prompt para pegar:**
 > Proyecto CinePaís, todo integrado (Fase 3). Estoy en la **Fase 4**. En **plan mode**, valida un plan para: (1) sembrar escenarios que hagan brillar al agente (sin N juntas, solo primera fila con alternativa, mejor función del finde por calidad, sold-out), (2) preparar el recorrido **"antes vs. después"** grabable, (3) desplegar (web→Vercel, agent→Fly.io), y (4) redactar el borrador del post de LinkedIn (skill-story: "en Fleet AI replicaba web apps para entrenar agentes; acá construí una réplica de un cine + un copiloto que arregla un dolor real de UX", con equilibrio cliente↔cine). Al aprobar, ejecútalo.
 
-Ejecutado según `.omo/plans/cinepais-phase-4-deploy.md`. Recorrido "antes vs. después" en
-`specs/003-demo-script.md`; borrador del post de LinkedIn en `specs/004-linkedin-post.md` una vez
-redactado.
+Recorrido "antes vs. después" en `specs/003-demo-script.md`; borrador del post de LinkedIn en
+`specs/004-linkedin-post.md`.
 
 ---
 

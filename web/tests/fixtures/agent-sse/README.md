@@ -6,7 +6,7 @@ Real Server-Sent Events (SSE) captures from the CinePaís agent, used for testin
 
 ### real-broad.txt
 
-**Source:** `.omo/evidence/f3-fixes-r6-qa1.txt`
+**Source:** live agent capture — QA run 1.
 
 **Query:** "Sombras del Puente" in Medellín (broad search, single seat)
 
@@ -22,7 +22,7 @@ Real Server-Sent Events (SSE) captures from the CinePaís agent, used for testin
 
 ### real-narrow-two-recommendations.txt
 
-**Source:** `.omo/evidence/f3-fixes-r6-qa2.txt`
+**Source:** live agent capture — QA run 2.
 
 **Query:** "Sombras del Puente" in IMAX format on 2026-08-14, requesting 2 seats (narrow search with date/format constraints)
 
@@ -38,7 +38,7 @@ Real Server-Sent Events (SSE) captures from the CinePaís agent, used for testin
 
 ### real-date-range.txt
 
-**Source:** `.omo/evidence/f3-fixes-r6-qa3.txt`
+**Source:** live agent capture — QA run 3.
 
 **Query:** "Sombras del Puente" for the weekend ("finde") — date range search
 
