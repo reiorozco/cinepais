@@ -316,3 +316,126 @@ async def test_cors_allowed_origin(app_with_mock_agent: FastAPI) -> None:
             },
         )
     assert resp.status_code in (200, 204)
+
+
+# ---------------------------------------------------------------------------
+# Tests: /chat — stale catalogue guard
+# ---------------------------------------------------------------------------
+
+
+class _FakeApiClient:
+    """Stands in for CinepaisApiClient, returning a canned showtime list or raising."""
+
+    def __init__(self, showtimes: list[object] | None, raises: Exception | None = None) -> None:
+        self._showtimes = showtimes
+        self._raises = raises
+        self.calls = 0
+
+    async def __aenter__(self) -> _FakeApiClient:
+        return self
+
+    async def __aexit__(self, *args: object) -> None:
+        return None
+
+    async def get_showtimes(self, **kwargs: object) -> list[object]:
+        self.calls += 1
+        if self._raises is not None:
+            raise self._raises
+        assert self._showtimes is not None
+        return self._showtimes
+
+
+def _install_probe(monkeypatch: pytest.MonkeyPatch, fake: _FakeApiClient) -> None:
+    """Point the catalogue probe at `fake` and clear the primed healthy verdict."""
+    import cinepais_agent.main as main_module
+
+    main_module._catalogue_ok.clear()
+    monkeypatch.setattr(main_module, "CinepaisApiClient", lambda: fake)
+
+
+async def test_chat_refuses_when_catalogue_is_empty(
+    app_with_mock_agent: FastAPI, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A stale seed window is answered immediately, without reaching the LLM."""
+    import cinepais_agent.main as main_module
+
+    called: list[bool] = []
+
+    async def _recording_astream_events(
+        input_data: object, config: object = None, version: str = "v2"
+    ) -> object:
+        called.append(True)
+        yield {"event": "on_chat_model_stream", "data": {"chunk": MagicMock(content="nope")}}
+
+    main_module._agent.astream_events = _recording_astream_events
+    _install_probe(monkeypatch, _FakeApiClient([]))
+
+    async with httpx.AsyncClient(
+        transport=ASGITransport(app=app_with_mock_agent), base_url="http://test"
+    ) as client:
+        resp = await client.post("/chat", json={"message": "hola", "sessionId": "stale-1"})
+
+    assert resp.status_code == 200
+    events = parse_sse_events(resp.text)
+    error_events = [e for e in events if e.get("event") == "error"]
+    assert error_events, f"No error events in: {events}"
+    assert json.loads(error_events[0]["data"])["code"] == "catalogue_empty"
+    assert not called, "The agent must not be invoked when the catalogue is empty"
+
+
+async def test_empty_catalogue_spends_no_request_budget(
+    app_with_mock_agent: FastAPI, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Refusing a stale demo must not consume the daily or per-session allowance."""
+    import cinepais_agent.main as main_module
+
+    day_key = main_module._utc_day_key()
+    main_module._daily_requests[day_key] = 5
+    _install_probe(monkeypatch, _FakeApiClient([]))
+
+    async with httpx.AsyncClient(
+        transport=ASGITransport(app=app_with_mock_agent), base_url="http://test"
+    ) as client:
+        await client.post("/chat", json={"message": "hola", "sessionId": "stale-budget"})
+
+    assert main_module._daily_requests[day_key] == 5
+    assert main_module._session_queries.get("stale-budget", 0) == 0
+
+
+async def test_unreachable_read_api_fails_open(
+    app_with_mock_agent: FastAPI, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A probe that cannot reach the read API must not turn a working demo into a refusal."""
+    _install_probe(monkeypatch, _FakeApiClient(None, raises=httpx.ConnectError("down")))
+
+    async with httpx.AsyncClient(
+        transport=ASGITransport(app=app_with_mock_agent), base_url="http://test"
+    ) as client:
+        resp = await client.post("/chat", json={"message": "hola", "sessionId": "probe-down"})
+
+    events = parse_sse_events(resp.text)
+    assert [e for e in events if e.get("event") == "token"], f"Expected tokens, got: {events}"
+    assert not [
+        e
+        for e in events
+        if e.get("event") == "error" and json.loads(e["data"])["code"] == "catalogue_empty"
+    ]
+
+
+async def test_probe_caches_healthy_verdict_but_not_the_empty_one(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The expensive verdict is cached; the empty one re-probes so a re-seed recovers at once."""
+    import cinepais_agent.main as main_module
+
+    healthy = _FakeApiClient([object()])
+    _install_probe(monkeypatch, healthy)
+    assert await main_module._catalogue_has_showtimes() is True
+    assert await main_module._catalogue_has_showtimes() is True
+    assert healthy.calls == 1, "A healthy catalogue must be probed only once per TTL window"
+
+    empty = _FakeApiClient([])
+    _install_probe(monkeypatch, empty)
+    assert await main_module._catalogue_has_showtimes() is False
+    assert await main_module._catalogue_has_showtimes() is False
+    assert empty.calls == 2, "An empty catalogue must be re-probed on every request"

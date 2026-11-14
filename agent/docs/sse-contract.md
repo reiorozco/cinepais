@@ -246,14 +246,20 @@ Both patterns are valid. Fase D must handle BOTH.
 |---|---|---|
 | `rate_limit_exceeded` | >10 req/min per IP | "Has superado el límite..." |
 | `session_cap_exceeded` | >20 queries/session (resets after 1h) | "Has alcanzado el límite..." |
+| `daily_cap_exceeded` | >`DAILY_REQUEST_CAP` accepted requests in one UTC day | "El copiloto alcanzó su cupo de consultas de hoy..." |
+| `catalogue_empty` | the read API serves no purchasable showtime — the rolling seed window has gone stale | "Ahora mismo no hay funciones cargadas en el catálogo de demo..." |
 | `input_too_long` | message > 2000 chars | "El mensaje es demasiado largo..." |
 | `empty_message` | message is blank/whitespace | "El mensaje no puede estar vacío." |
 | `empty_reply` | agent produced only thinking parts, no text | "No pude generar una respuesta..." |
 | `too_broad` | date range >1 day with no film or city | "Especifica una película o ciudad..." |
 | `bad_date_range` | unrecognized date_range format | "YYYY-MM-DD, YYYY-MM-DD..YYYY-MM-DD, hoy\|mañana\|finde\|semana" |
 | `timeout` | tool call exceeded timeout | "La consulta tardó demasiado..." |
+| `recursion_limit` | the agent loop hit `recursion_limit` without settling — a dead end, not a crash | "No logré resolver tu consulta con la información disponible..." |
 | `agent_unavailable` | agent failed to initialize | "El agente no está disponible..." |
 | `internal_error` | unexpected exception | "Ocurrió un error interno..." |
+
+`catalogue_empty` is checked **before** any budget counter and never reaches the LLM: a stale demo
+costs nothing and answers in ~2 s instead of burning the agent loop on searches that cannot succeed.
 
 ---
 

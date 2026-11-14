@@ -20,6 +20,7 @@ from slowapi.util import get_remote_address
 from sse_starlette.sse import EventSourceResponse
 
 from .agent import build_agent, close_agent
+from .api_client import CinepaisApiClient
 from .config import settings
 from .sse import error_stream, stream_agent
 
@@ -68,9 +69,41 @@ _daily_requests = cast(
     cachetools.TTLCache[str, int, float], cachetools.TTLCache(maxsize=8, ttl=86_400)
 )
 
+# Liveness of the mock catalogue. `/api/showtimes` already applies the 15-minute cutoff, so an
+# empty array means every seeded showtime now lies in the past: the rolling seven-day seed window
+# has slid by and there is nothing left for the copilot to recommend. Only the *healthy* verdict is
+# cached — see `_catalogue_has_showtimes`.
+_catalogue_ok = cast(cachetools.TTLCache[str, bool, float], cachetools.TTLCache(maxsize=1, ttl=300))
+
 # App state (agent + mcp_client, owned by lifespan)
 _agent: Any = None
 _mcp_client: Any = None
+
+
+async def _catalogue_has_showtimes() -> bool:
+    """Whether the read API still serves at least one purchasable showtime.
+
+    Caching is deliberately one-sided. A healthy verdict is held for the TTL, because that is the
+    response that costs something to fetch (the whole catalogue). An empty catalogue is *not*
+    cached: the response is a two-byte `[]`, and re-probing means the copilot starts working again
+    the moment a re-seed lands instead of insisting it has no data for another TTL window.
+
+    Fails **open**. A probe that cannot reach the web API returns True, so a blip in the read API
+    degrades to the pre-existing behaviour rather than converting a working demo into a refusal.
+    """
+    if _catalogue_ok.get("live", False):
+        return True
+    try:
+        async with CinepaisApiClient() as client:
+            showtimes = await client.get_showtimes()
+    except Exception as exc:
+        logger.warning("Catalogue probe failed; letting the request through: %s", exc)
+        return True
+    if showtimes:
+        _catalogue_ok["live"] = True
+        return True
+    logger.info("Catalogue probe found no purchasable showtimes — seed window is stale")
+    return False
 
 
 @asynccontextmanager
@@ -153,6 +186,22 @@ async def chat(request: Request, body: ChatRequest) -> EventSourceResponse:
             error_stream(
                 "input_too_long",
                 "El mensaje es demasiado largo. Máximo 2000 caracteres.",
+            ),
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        )
+
+    # Ahead of every budget counter on purpose: a stale catalogue is a service-state condition,
+    # not abuse, so it must not spend the day's LLM allowance. It also short-circuits the failure
+    # this guard exists for — against an empty catalogue the agent retries widened searches until
+    # it exhausts `recursion_limit`, leaving the visitor watching a spinner for ~40 s before a
+    # generic "internal error". Answering immediately costs zero LLM calls and tells the truth.
+    if not await _catalogue_has_showtimes():
+        return EventSourceResponse(
+            error_stream(
+                "catalogue_empty",
+                "Ahora mismo no hay funciones cargadas en el catálogo de demo, así que no puedo "
+                "recomendarte sillas. Los datos son ficticios y se regeneran a mano — el resto "
+                "del sitio sigue disponible.",
             ),
             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
         )

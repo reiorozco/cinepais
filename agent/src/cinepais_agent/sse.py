@@ -7,6 +7,8 @@ import re
 from collections.abc import AsyncGenerator, MutableMapping
 from typing import Any
 
+from langgraph.errors import GraphRecursionError
+
 from .config import settings
 from .events import ErrorEvent, RecommendationEvent, TokenEvent, ToolCallEvent
 
@@ -149,6 +151,23 @@ async def stream_agent(
             "data": ErrorEvent(
                 code="timeout",
                 message="La consulta tardó demasiado. Intenta de nuevo.",
+            ).model_dump_json(),
+        }
+    except GraphRecursionError:
+        # Hitting `recursion_limit` means the model kept re-querying instead of settling — a
+        # bounded loop working as designed, not a crash. Folding it into the generic handler
+        # below reported "error interno", which sends the reader hunting for a bug that is not
+        # there. Logged at warning, not error, for the same reason.
+        logger.warning("Agent hit the recursion limit (session=%s)", session_id)
+        _emitted_error = True
+        yield {
+            "event": "error",
+            "data": ErrorEvent(
+                code="recursion_limit",
+                message=(
+                    "No logré resolver tu consulta con la información disponible. "
+                    "Intenta acotarla — por ejemplo: película, ciudad y fecha."
+                ),
             ).model_dump_json(),
         }
     except Exception as exc:

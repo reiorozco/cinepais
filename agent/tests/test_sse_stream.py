@@ -146,3 +146,21 @@ async def test_recommendation_fires_with_namespaced_tool_name() -> None:
     data = json.loads(rec_items[0]["data"])
     assert data["outcome"] == "recommended"
     assert data["seatIds"] == ["1_4_7", "1_4_8"]
+
+
+async def test_recursion_limit_reports_its_own_code_not_internal_error() -> None:
+    """Exhausting the bounded agent loop is a dead end, not a crash — say so precisely."""
+    from langgraph.errors import GraphRecursionError
+
+    async def _fake(input_data, config=None, version="v2"):  # type: ignore[misc]
+        raise GraphRecursionError("recursion limit reached")
+        yield  # pragma: no cover - unreachable, keeps the callable an async generator
+
+    items = await _run_stream(_fake)
+
+    error_items = [i for i in items if i["event"] == "error"]
+    assert len(error_items) == 1
+    payload = json.loads(error_items[0]["data"])
+    assert payload["code"] == "recursion_limit"
+    assert "error interno" not in payload["message"]
+    assert items[-1]["event"] == "done"
